@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="database" uuid="79c6709c-c13c-40eb-934f-bedd881f1ce1">
+    <data-source source="LOCAL" name="database" uuid="6f24897a-bdb3-46c6-8bd0-686ea484b974">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
       <jdbc-url>jdbc:sqlite:C:\Users\soles\Desktop\GEO\GeoClock_back\database.db</jdbc-url>
+      <libraries>
+        <library>
+          <url>file://$APPLICATION_CONFIG_DIR$/jdbc-drivers/Xerial SQLiteJDBC/3.31.1/sqlite-jdbc-3.31.1.jar</url>
+        </library>
+      </libraries>
     </data-source>
-    <data-source source="LOCAL" name="identifier.sqlite" uuid="75c9b4e7-bfc3-4f36-b054-5f0c9a256c74">
+    <data-source source="LOCAL" name="identifier.sqlite" uuid="71b793d9-d45b-41f7-9080-cc1851f36144">
       <driver-ref>sqlite.xerial</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.sqlite.JDBC</jdbc-driver>

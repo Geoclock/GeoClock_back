@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 368b55029129
-Revises: 5257cbf6c442
-Create Date: 2020-11-25 20:21:43.324602
+Revision ID: d7995493310c
+Revises: 
+Create Date: 2020-11-25 23:10:19.528906
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '368b55029129'
-down_revision = '5257cbf6c442'
+revision = 'd7995493310c'
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -23,24 +23,19 @@ def upgrade():
     sa.Column('latitude', sa.Float(), nullable=False),
     sa.Column('longitude', sa.Float(), nullable=False),
     sa.Column('radius', sa.Integer(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('latitude'),
-    sa.UniqueConstraint('longitude'),
-    sa.UniqueConstraint('radius')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('model_notification',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('notification', sa.String(length=200), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('notification')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('model_user',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_login', sa.String(length=50), nullable=False),
     sa.Column('user_password', sa.String(length=50), nullable=False),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('user_login'),
-    sa.UniqueConstraint('user_password')
+    sa.UniqueConstraint('user_login')
     )
     # ### end Alembic commands ###
 

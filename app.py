@@ -66,16 +66,11 @@ def hello_not():
 class ModelUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_login = db.Column(db.String(50), unique=True, nullable=False)
-    user_password = db.Column(db.String(50), unique=True, nullable=False)
+    user_password = db.Column(db.String(50), nullable=False)
 
     def __init__(self, user_login=None, user_password=None):
         self.user_login = user_login
         self.user_password = user_password
-
-    """def add_users_to_db(self, user_login, user_password):
-        data = ModelUser(self, user_login, user_password)
-        db.session.add(data)
-        db.session.commit()"""
 
     def add_users_to_db(self):
         data = ModelUser(self.user_login, self.user_password)
@@ -85,43 +80,42 @@ class ModelUser(db.Model):
 
 class ModelGeolocation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    latitude = db.Column(db.Float, unique=True, nullable=False)
-    longitude = db.Column(db.Float, unique=True, nullable=False)
-    radius = db.Column(db.Integer, unique=True, nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    radius = db.Column(db.Integer, nullable=False)
 
     def __init__(self, latitude=None, longitude=None, radius=None):
         self.latitude = latitude
         self.longitude = longitude
         self.radius = radius
 
-    def add_users_to_db(self, latitude, longitude, radius):
-        data = ModelUser(self, latitude, longitude, radius)
+    def add_geolocation_to_db(self):
+        data = ModelGeolocation(self.latitude, self.longitude, self.radius)
         db.session.add(data)
         db.session.commit()
 
 
 class ModelNotification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    notification = db.Column(db.String(200), unique=True, nullable=False)
+    notification = db.Column(db.String(200), nullable=False)
 
     def __init__(self, notification=None):
         self.notification = notification
 
-    def add_users_to_db(self, notification):
-        data = ModelUser(self, notification)
+    def add_notification_to_db(self):
+        data = ModelNotification(self.notification)
         db.session.add(data)
         db.session.commit()
 
 
 class UserController(object):
 
-    def __init__(self, model_user=ModelUser()):  # було ...=modeluser()
+    def __init__(self, model_user=ModelUser()):
         self.model_user = model_user
 
     def create(self, user_data=None):
         self.model_user.user_login = user_data.get('login')
         self.model_user.user_password = user_data.get('password')
-        #self.model_user.add_users_to_db(self.model_user.user_login, self.model_user.user_password)
         self.model_user.add_users_to_db()
         if self.model_user.user_login != None and self.model_user.user_password != None:
             return 1
@@ -137,6 +131,9 @@ class GeolocationController(object):
         self.model_geolocation.latitude = geo_data.get('lat')
         self.model_geolocation.longitude = geo_data.get('lon')
         self.model_geolocation.radius = geo_data.get('radius')
+
+        self.model_geolocation.add_geolocation_to_db()
+
         if self.model_geolocation.latitude != None and self.model_geolocation.longitude != None and self.model_geolocation.radius != None:
             return 1
         else:
@@ -149,6 +146,9 @@ class NotificationController(object):
 
     def create(self, not_data=None):
         self.model_notification.notification = not_data.get('not')
+
+        self.model_notification.add_notification_to_db()
+
         if self.model_notification.notification != None:
             return 1
         else:
