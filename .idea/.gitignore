@@ -2,7 +2,7 @@
 /shelf/
 /workspace.xml
 # Datasource local storage ignored files
-/../../../../../:\git\4 lab\flaskProject1\.idea/dataSources/
+/../../../../../../:\Users\soles\PycharmProjects\geo\.idea/dataSources/
 /dataSources.local.xml
 # Editor-based HTTP Client requests
 /httpRequests/

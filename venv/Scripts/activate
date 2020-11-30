@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\soles\Desktop\GEO\GeoClock_back\venv"
+VIRTUAL_ENV="C:\Users\soles\PycharmProjects\geo\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
