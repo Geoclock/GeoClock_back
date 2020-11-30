@@ -1,22 +1,21 @@
-from flask import Flask, json
-from flask_script import Manager
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, request
 from flask_migrate import Migrate, MigrateCommand
+
+from Database import db
+
+from Controller.NotificationController import NotificationController
+from Controller.GeolocationController import GeolocationController
+from Controller.UserController import UserController
+
+from flask_login import LoginManager
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+
+manager = LoginManager(app)
 
 migrate = Migrate(app, db)
-
-manager = Manager(app)
-manager.add_command('db', MigrateCommand)
-
-
-@manager.command
-def db_create():
-    db.create_all()
 
 
 @app.route("/start")
@@ -24,38 +23,74 @@ def Hello():
     return "Hello to everyoneeee!"
 
 
-class ModelUser(object):
-    def __init__(self, user_login=None, user_password=None):
-        self.user_login = user_login
-        self.user_password = user_password
+# link to try: http://127.0.0.1:5000/UserCreate?login=Buka&password=1111
+
+@app.route('/UserCreate', methods=['GET'])
+def hello_user():
+    user_data = request.args
+    user_controller = UserController()
+    if user_controller.create(user_data):
+        return "Success!"
+    else:
+        return "Create failed!"
 
 
-class ModelGeolocation(object):
-    def __init__(self, latitude=None, longitude=None, radius=None):
-        self.latitude = latitude
-        self.longitude = longitude
-        self.radius = radius
+# link to try: http://127.0.0.1:5000/UserRead?id=3
+
+@app.route('/UserRead', methods=['GET'])
+def read_user():
+    user_id = request.args.get('id')
+    user_controller = UserController()
+    user = user_controller.read(user_id)
+    return "For " + user.user_login + " password : " + user.user_password
 
 
-class ModelNotification(object):
-    def __init__(self, notification=None):
-        self.notification = notification
+# link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24
+
+@app.route('/GeoCreate', methods=['GET'])
+def hello_geo():
+    geo_data = request.args
+    geo_controller = GeolocationController()
+    if geo_controller.create(geo_data):
+        return "Success!"
+    else:
+        return "Create failed!"
 
 
-class UserController(object):
-    def __init__(self, model_user):
-        self.model_user = model_user
+# link to try: http://127.0.0.1:5000/GeoRead?id=3
+
+@app.route('/GeoRead', methods=['GET'])
+def read_geo():
+    geo_id = request.args.get('id')
+    geo_controller = GeolocationController()
+    geo = geo_controller.read(geo_id)
+    return "Latitude : " + str(geo.latitude) + "   Longitude : " + str(geo.longitude) + "   Radius : " + str(geo.radius)
 
 
-class GeolocationController(object):
-    def __init__(self, model_geolocation):
-        self.model_geolocation = model_geolocation
+# link to try: http://127.0.0.1:5000/NotCreate?not=Have_a_good_day)
+
+@app.route('/NotCreate', methods=['GET'])
+def hello_not():
+    not_data = request.args
+    not_controler = NotificationController()
+    if not_controler.create(not_data):
+        return "Success!"
+    else:
+        return "Create failed!"
 
 
-class NotificationController(object):
-    def __init__(self, model_notification):
-        self.model_notification = model_notification
+# link to try: http://127.0.0.1:5000/NotRead?id=1
+
+@app.route('/NotRead', methods=['GET'])
+def read_not():
+    not_id = request.args.get('id')
+    not_controller = NotificationController()
+    not_ = not_controller.read(not_id)
+    return "Message : " + not_.notification
 
 
-if __name__ == 'main':
-    manager.run()
+
+
+if __name__ == '__main__':
+    db.__init__(app)
+    app.run()
