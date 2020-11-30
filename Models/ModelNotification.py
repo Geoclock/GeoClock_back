@@ -1,4 +1,4 @@
-from Models.ModelUser import db
+from Database import db
 
 
 class ModelNotification(db.Model):

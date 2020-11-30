@@ -1,9 +1,8 @@
 from flask import Flask, request
 from flask_migrate import Migrate, MigrateCommand
-from flask_script import Manager
-from flask_sqlalchemy import SQLAlchemy
 
-from Models.ModelUser import db
+from Database import db
+
 from Controller.NotificationController import NotificationController
 from Controller.GeolocationController import GeolocationController
 from Controller.UserController import UserController
