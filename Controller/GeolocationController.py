@@ -12,7 +12,7 @@ class GeolocationController(object):
 
         self.model_geolocation.add_geolocation_to_db()
 
-        if self.model_geolocation.latitude != None and self.model_geolocation.longitude != None and self.model_geolocation.radius != None:
+        if self.model_geolocation.latitude and self.model_geolocation.longitude and self.model_geolocation.radius:
             return 1
         else:
             return 0

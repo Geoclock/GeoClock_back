@@ -2,15 +2,16 @@ from Models.ModelNotification import ModelNotification
 
 
 class NotificationController(object):
+
     def __init__(self, model_notification=ModelNotification()):
         self.model_notification = model_notification
 
     def create(self, not_data=None):
-        self.model_notification.notification = not_data.get('not')
 
+        self.model_notification.notification = not_data.get('not')
         self.model_notification.add_notification_to_db()
 
-        if self.model_notification.notification != None:
+        if self.model_notification.notification:
             return 1
         else:
             return 0
