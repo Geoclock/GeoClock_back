@@ -25,18 +25,22 @@ class ModelUser(db.Model, UserMixin):
 
     def read_from_db_(self, user_id=None, user_login=None):
 
+        read_user = None
+        
         if user_id:
             # get user from db by his `id`
             read_user = ModelUser.query.filter_by(id=user_id).first()
         elif user_login:
             # get user from db by his `login`
             read_user = ModelUser.query.filter_by(user_login=user_login).first()
+            
+        if read_user:
+            self.user_login = read_user.user_login
+            self.user_password = read_user.user_password
         else:
             # if id==login==None
             pass
 
-        self.user_login = read_user.user_login
-        self.user_password = read_user.user_password
 
 
 @manager.user_loader
