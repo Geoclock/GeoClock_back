@@ -23,4 +23,3 @@ class ModelNotification(db.Model):
         read_notification = ModelNotification.query.filter_by(id=not_id).first()
         self.notification = read_notification.notification
 
-
