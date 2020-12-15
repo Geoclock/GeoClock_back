@@ -1,7 +1,7 @@
 from flask import request
 from app import app
 from Database import db
-from flask import request, redirect, flash, render_template, url_for
+from flask import request, redirect, flash, render_template, url_for, jsonify
 from flask_login import login_user, login_required, logout_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from Controller.NotificationController import NotificationController
@@ -19,9 +19,9 @@ def Hello():
 # link to try: http://127.0.0.1:5000/register
 @app.route("/register", methods=['GET', 'POST'])
 def Register():
-    login = request.form.get('login')
-    password = request.form.get('password')
-    password2 = request.form.get('password2')
+    login = request.authorization.get('username')
+    password = request.authorization.get('password')
+    password2 = request.authorization.get('password2')
     if request.method == 'POST':
         if not (login or password or password2):
             flash('Please, fill all fields!')
@@ -40,8 +40,12 @@ def Register():
 # link to try: http://127.0.0.1:5000/login
 @app.route("/login", methods=['GET', 'POST'])
 def Login():
-    login = request.form.get('login')
-    password = request.form.get('password')
+    login = request.authorization.get('username')
+    password = request.authorization.get('password')
+    try:
+        UserValidation().load(request.authorization)
+    except ValidationError as err:
+        return jsonify(message=err.messages, status=400)
     if login and password:
         # user founded in db by entered login
         user = ModelUser()
@@ -88,7 +92,7 @@ def read_user():
     return "For " + read_user.user_login + " password : " + read_user.user_password
 
 
-# link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24
+# link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24&user_name=Buka
 @app.route('/GeoCreate', methods=['GET'])
 def hello_geo():
     geo_data = request.args
@@ -109,7 +113,19 @@ def read_geo():
         read_geo.radius)
 
 
-# link to try: http://127.0.0.1:5000/NotCreate?not=Have_a_good_day)
+# link to try: http://127.0.0.1:5000/GeoDelete?id=1
+@app.route('/GeoDelete', methods=['GET'])
+def delete_geo():
+    geolocation_id = request.args.get('id')
+    geolocation_controller = GeolocationController()
+    delete_geolocation = geolocation_controller.delete(geolocation_id)
+    if delete_geolocation:
+        return "Successfully deleted"
+    else:
+        return "ERROR"
+
+
+# link to try: http://127.0.0.1:5000/NotCreate?not=Have_a_good_day&geo_id=1)
 @app.route('/NotCreate', methods=['GET'])
 def hello_not():
     notification_data = request.args
@@ -127,3 +143,39 @@ def read_not():
     notification_controller = NotificationController()
     read_notification = notification_controller.read(notification_id)
     return "Message : " + read_notification.notification
+
+
+# link to try: http://127.0.0.1:5000/NotDelete?id=1
+@app.route('/NotDelete', methods=['GET'])
+def delete_not():
+    notification_id = request.args.get('id')
+    notification_controller = NotificationController()
+    delete_notification = notification_controller.delete(notification_id)
+    if delete_notification:
+        return "Successfully deleted"
+    else:
+        return "Editing failed!"
+
+
+# link to try: http://127.0.0.1:5000/NotEdit?id=1&notification=newtext
+@app.route('/NotEdit', methods=['PUT'])
+def update_notification():
+    not_data = request.args
+    not_id = request.args.get('id')
+    not_controller = NotificationController()
+    if not_controller.edit(not_id, not_data):
+        return "Successfully edited"
+    else:
+        return "ERROR"
+
+
+# link to try: http://127.0.0.1:5000/GeoEdit?id=1&new_radius=20
+@app.route('/GeoEdit', methods=['PUT'])
+def update_geo():
+    geo_id = request.args.get('id')
+    geo_data = request.args
+    geo_controller = GeolocationController()
+    if geo_controller.edit_geo(geo_id, geo_data):
+        return "Successfully edited"
+    else:
+        return "ERROR"
