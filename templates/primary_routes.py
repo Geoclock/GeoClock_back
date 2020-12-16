@@ -13,7 +13,7 @@ from marshmallow import ValidationError
 
 @app.route("/home")
 def Hello():
-    return render_template('home.html')
+    return render_template('home.html', user=current_user)
 
 
 # link to try: http://127.0.0.1:5000/register
@@ -46,7 +46,7 @@ def Login():
         # checking existing & entered password
         if user and check_password_hash(user.user_password, password):
             login_user(user, remember=True)
-            return render_template('logged_in.html', user=user)
+            return redirect(url_for('Hello'))
             # поки не юзаєм цього
             # то переадресація не некст сторіночку, куда може попасти залогований юзер
             """
@@ -65,9 +65,9 @@ def Login():
 # LOGOUT
 @app.route('/logout')
 @login_required
-def logout():
+def Logout():
     logout_user()
-    return redirect(url_for('Login'))
+    return redirect(url_for('Hello'))
 
 
 @app.after_request
@@ -92,11 +92,16 @@ def read_user():
 @app.route('/GeoCreate', methods=['POST'])
 @login_required
 def hello_geo():
-    geo_data = request.args
-    if GeolocationController.create(geo_data=geo_data, user_login=current_user.login):
-        return "Success!"
+    geo_data = request.form
+    if GeolocationController.create(geo_data=geo_data, user_login=current_user.user_login):
+        #return "Success!"
+        flash('Successfully created geolocation!')
     else:
-        return "Create failed!"
+        #return "Create failed!"
+        flash('Creation failed!')
+    return redirect(url_for('Hello'))
+
+
 
 
 # link to try: http://127.0.0.1:5000/GeoRead?id=3
