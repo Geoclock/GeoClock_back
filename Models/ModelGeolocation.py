@@ -1,4 +1,5 @@
 from Database import db
+from Models.ModelUser import ModelUser
 
 
 class ModelGeolocation(db.Model):
@@ -11,23 +12,33 @@ class ModelGeolocation(db.Model):
     radius = db.Column(db.Integer, nullable=False)
     # id of user that own this geolocation
     creator = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_creator = db.relationship('ModelUser', backref='user')
     # one to one (Geolocation -> Notification)
-    message = db.relationship('ModelNotification', backref='point', uselist=False)
 
-    def __init__(self, latitude=None, longitude=None, radius=None, creator=None):
+
+    def __init__(self, latitude=None, longitude=None, radius=None, user_creator=None):
         self.latitude = latitude
         self.longitude = longitude
         self.radius = radius
-        self.creator = creator
+        self.user_creator = user_creator
 
     def add_geolocation_to_db(self):
-        data = ModelGeolocation(self.latitude, self.longitude, self.radius, self.creator)
-        db.session.add(data)
+        db.session.add(self)
         db.session.commit()
 
-    def read_from_db_(self, geo_id):
-        read_geo = ModelGeolocation.query.filter_by(id=geo_id).first()
-        self.latitude = read_geo.latitude
-        self.longitude = read_geo.longitude
-        self.radius = read_geo.radius
-        #self.creator = geo.creator
+    @classmethod
+    def read_from_db(cls, geo_id=None):
+        return ModelGeolocation.query.filter_by(id=geo_id).first()
+
+    @classmethod
+    def delete_from_db(cls, geo_id=None):
+        cls = ModelGeolocation.read_from_db(geo_id=geo_id)
+        if not cls:
+            return 0
+        db.session.delete(cls)
+        db.session.commit()
+        return 1
+
+    def edit_db(self, new_radius=None):
+        self.radius = new_radius
+        db.session.commit()
