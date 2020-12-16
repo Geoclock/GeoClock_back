@@ -6,11 +6,10 @@ from Database import db
 class GeolocationController(object):
 
     @classmethod
-    def create(cls, geo_data=None):
+    def create(cls, geo_data=None, user_login=None):
         latitude = geo_data.get('lat')
         longitude = geo_data.get('lon')
         radius = geo_data.get('radius')
-        user_login=geo_data.get('user_login')
         user_creator = ModelUser.read_from_db(user_login=user_login)
         if not latitude or not longitude or not radius or not user_creator:
             return 0

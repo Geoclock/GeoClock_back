@@ -2,7 +2,7 @@ from flask import request
 from app import app
 from Database import db
 from flask import request, redirect, flash, render_template, url_for
-from flask_login import login_user, login_required, logout_user
+from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from Controller.NotificationController import NotificationController
 from Controller.GeolocationController import GeolocationController
@@ -45,7 +45,7 @@ def Login():
         user = ModelUser.read_from_db(user_login=login)
         # checking existing & entered password
         if user and check_password_hash(user.user_password, password):
-            login_user(user)
+            login_user(user, remember=True)
             return render_template('logged_in.html', user=user)
             # поки не юзаєм цього
             # то переадресація не некст сторіночку, куда може попасти залогований юзер
@@ -65,7 +65,7 @@ def Login():
 # LOGOUT
 @app.route('/logout')
 @login_required
-def Logout():
+def logout():
     logout_user()
     return redirect(url_for('Login'))
 
@@ -77,21 +77,23 @@ def redirect_to_signin(response):
     return response
 
 
-# link to try: http://127.0.0.1:5000/UserRead?id=3
+# link to try: http://127.0.0.1:5000/UserRead
 @app.route('/UserRead', methods=['GET'])
+@login_required
 def read_user():
-    user_id = request.args.get('id')
-    read_user = UserController.read(user_id=user_id)
+    #user_id = request.args.get('id')
+    read_user = UserController.read(user_id=current_user.id)
     if read_user:
         return "For " + read_user.user_login + " password : " + read_user.user_password
     else:
         return "Error!"
 
-# link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24&user_login=Buka
+# link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24
 @app.route('/GeoCreate', methods=['POST'])
+@login_required
 def hello_geo():
     geo_data = request.args
-    if GeolocationController.create(geo_data=geo_data):
+    if GeolocationController.create(geo_data=geo_data, user_login=current_user.login):
         return "Success!"
     else:
         return "Create failed!"
@@ -99,6 +101,7 @@ def hello_geo():
 
 # link to try: http://127.0.0.1:5000/GeoRead?id=3
 @app.route('/GeoRead', methods=['GET'])
+@login_required
 def read_geo():
     geo_id = request.args.get('id')
     read_geo = GeolocationController.read(geo_id=geo_id)
@@ -111,6 +114,7 @@ def read_geo():
 
 # link to try: http://127.0.0.1:5000/GeoEdit?id=1&new_radius=20
 @app.route('/GeoEdit', methods=['PUT'])
+@login_required
 def update_geo():
     geo_id = request.args.get('id')
     geo_data = request.args
@@ -122,6 +126,7 @@ def update_geo():
 
 # link to try: http://127.0.0.1:5000/GeoDelete?id=1
 @app.route('/GeoDelete', methods=['DELETE'])
+@login_required
 def delete_geo():
     geolocation_id = request.args.get('id')
     if GeolocationController.delete(geo_id=geolocation_id):
@@ -132,6 +137,7 @@ def delete_geo():
 
 # link to try: http://127.0.0.1:5000/NotCreate?not=Have_a_good_day&geo_id=1)
 @app.route('/NotCreate', methods=['POST'])
+@login_required
 def hello_not():
     notification_data = request.args
     if NotificationController.create(not_data=notification_data):
@@ -142,6 +148,7 @@ def hello_not():
 
 # link to try: http://127.0.0.1:5000/NotRead?id=1
 @app.route('/NotRead', methods=['GET'])
+@login_required
 def read_not():
     notification_id = request.args.get('id')
     read_notification = NotificationController.read(not_id=notification_id)
@@ -153,6 +160,7 @@ def read_not():
 
 # link to try: http://127.0.0.1:5000/NotDelete?id=1
 @app.route('/NotDelete', methods=['DELETE'])
+@login_required
 def delete_not():
     notification_id = request.args.get('id')
     if NotificationController.delete(not_id=notification_id):
@@ -163,6 +171,7 @@ def delete_not():
 
 # link to try: http://127.0.0.1:5000/NotEdit?id=1&notification=newtext
 @app.route('/NotEdit', methods=['PUT'])
+@login_required
 def update_notification():
     not_data = request.args
     not_id = request.args.get('id')
