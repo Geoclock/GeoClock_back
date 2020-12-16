@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Home page</title>
+</head>
+<body>
+<!-- Print message passed by `flash` function -->
+{% with messages = get_flashed_messages() %}
+    {%  if messages %}
+        <ul class=flashes>
+            {%  for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+
+{% if(user.is_authenticated) %}
+    <h3>Hello {{ user.user_login }}</h3>
+    <table>
+        <tr>
+            <!-- Redirect to logout form -->
+            <td><a href="{{ url_for('Logout') }}" >Logout</a></td>
+
+        </tr>
+    </table>
+    <form action="/GeoCreate" method="POST">
+        <table>
+            <tr>
+                <td>Latitude : </td>
+                <td><input type="text" name="lat"></td>
+            </tr>
+            <tr>
+                <td>Longtitude : </td>
+                <td><input type="text" name="lon"></td>
+            </tr>
+            <tr>
+                <td>Radius : </td>
+                <td><input type="text" name="radius"></td>
+            </tr>
+            <tr>
+                <td><input type="submit"></td>
+            </tr>
+        </table>
+    </form>
+{%  else  %}
+    <table>
+        <tr>
+            <!-- Redirect to register form -->
+            <td><a href="{{ url_for('Register') }}" >Register</a></td>
+        </tr>
+        <tr>
+            <!-- Redirect to login form -->
+            <td><a href="{{ url_for('Login') }}" >Login</a></td>
+        </tr>
+
+    </table>
+{% endif %}
+
+</body>
+</html>
