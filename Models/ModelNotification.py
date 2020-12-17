@@ -3,7 +3,6 @@ from Models.ModelGeolocation import ModelGeolocation
 
 
 class ModelNotification(db.Model):
-
     __tablename__ = 'notification'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -20,15 +19,23 @@ class ModelNotification(db.Model):
         db.session.add(self)
         db.session.commit()
 
-    def read_from_db_(self, not_id):
-        read_notification = ModelNotification.query.filter_by(id=not_id).first()
-        self.notification = read_notification.notification
-    
-    def delete_from_db_(self):
-        db.session.delete(self)
-        db.session.commit()
+    @classmethod
+    def read_from_db(cls, not_id=None):
+        return ModelNotification.query.filter_by(id=not_id).first()
 
-    def edit_db(self, geo_id=None):
-        edit_geo = ModelGeolocation.query.filter_by(id=geo_id).first()
-        self.radius = edit_geo.new_radius
+    @classmethod
+    def read_list_by_point_from_db(cls, point_id=None):
+        return ModelNotification.query.filter_by(point_id=point_id).all()
+
+    @classmethod
+    def delete_from_db(cls, not_id=None):
+        cls = ModelNotification.read_from_db(not_id=not_id)
+        if not cls:
+            return 0
+        db.session.delete(cls)
+        db.session.commit()
+        return 1
+
+    def edit_db(self, new_notification=None):
+        self.notification = new_notification
         db.session.commit()
