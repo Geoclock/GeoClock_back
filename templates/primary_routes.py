@@ -103,18 +103,14 @@ def hello_geo():
 
 
 
-
-# link to try: http://127.0.0.1:5000/GeoRead?id=3
+#by user_id
+# link to try: http://127.0.0.1:5000/GeoRead?id=21
 @app.route('/GeoRead', methods=['GET'])
 @login_required
 def read_geo():
-    geo_id = request.args.get('id')
-    read_geo = GeolocationController.read(geo_id=geo_id)
-    if read_geo:
-        return "Latitude : " + str(read_geo.latitude) + "   Longitude : " + str(read_geo.longitude) + "   Radius : " + str(
-        read_geo.radius)
-    else:
-        return "Error!"
+    user_id = request.args.get('id')
+    read_geo = GeolocationController.read(user_id=user_id)
+    return read_geo
 
 
 # link to try: http://127.0.0.1:5000/GeoEdit?id=1&new_radius=20
@@ -184,4 +180,3 @@ def update_notification():
         return "Successfully edited"
     else:
         return "ERROR"
-

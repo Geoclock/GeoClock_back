@@ -1,3 +1,4 @@
+from flask import jsonify
 from Models.ModelGeolocation import ModelGeolocation
 from Models.ModelUser import ModelUser
 from Models.ModelNotification import ModelNotification
@@ -18,11 +19,12 @@ class GeolocationController(object):
         return 1
 
     @classmethod
-    def read(cls, geo_id=None):
-        read_geo = ModelGeolocation.read_from_db(geo_id=geo_id)
-        if read_geo:
-            return read_geo
-        return None
+    def read(cls, user_id=None):
+        read_geo = ModelGeolocation.read_from_db(user_id=user_id)
+        if read_geo is None:
+            return jsonify(message="User was not found", status=404)
+        geos = ModelGeolocation.query.filter_by(creator=user_id).all()
+        return jsonify(json_list=[[i.latitude, i.longitude, i.radius] for i in geos])
 
     @classmethod
     def delete(cls, geo_id=None):

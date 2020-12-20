@@ -15,7 +15,6 @@ class ModelGeolocation(db.Model):
     user_creator = db.relationship('ModelUser', backref='user')
     # one to one (Geolocation -> Notification)
 
-
     def __init__(self, latitude=None, longitude=None, radius=None, user_creator=None):
         self.latitude = latitude
         self.longitude = longitude
@@ -27,8 +26,8 @@ class ModelGeolocation(db.Model):
         db.session.commit()
 
     @classmethod
-    def read_from_db(cls, geo_id=None):
-        return ModelGeolocation.query.filter_by(id=geo_id).first()
+    def read_from_db(cls, user_id=None):
+        return ModelGeolocation.query.filter_by(creator=user_id).first()
 
     @classmethod
     def delete_from_db(cls, geo_id=None):
