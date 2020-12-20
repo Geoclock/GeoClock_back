@@ -1,5 +1,4 @@
 from flask import jsonify
-
 from Models.ModelGeolocation import ModelGeolocation
 from Models.ModelUser import ModelUser
 from Models.ModelNotification import ModelNotification

@@ -180,4 +180,3 @@ def update_notification():
         return "Successfully edited"
     else:
         return "ERROR"
-
