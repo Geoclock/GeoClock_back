@@ -6,6 +6,10 @@ from flask import redirect, flash, render_template, url_for, request
 
 class UserController(object):
 
-    def read(self, user_id=None, user_login=None):
-        user = ModelUser().read_from_db_(user_id=user_id, user_login=user_login)
-        return user
+
+    @classmethod
+    def read(cls, user_id=None, user_login=None):
+        read_user = ModelUser.read_from_db(user_id=user_id, user_login=user_login)
+        if read_user:
+            return read_user
+        return None

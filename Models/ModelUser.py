@@ -10,35 +10,30 @@ class ModelUser(db.Model, UserMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     user_login = db.Column(db.String(50), unique=True, nullable=False)
+    user_email = db.Column(db.String(50), unique=True, nullable=False)
     user_password = db.Column(db.String(50), nullable=False)
     # one to many (User -> Geolocation)
 
 
-    def __init__(self, user_login=None, user_password=None):
+    def __init__(self, user_login=None, user_email=None, user_password=None):
         self.user_login = user_login
+        self.user_email = user_email
         self.user_password = user_password
 
+
     def add_users_to_db(self):
-        data = ModelUser(self.user_login, self.user_password)
-        db.session.add(data)
+        db.session.add(self)
         db.session.commit()
 
-    def read_from_db_(self, user_id=None, user_login=None):
-        read_user = ModelUser()
+    @classmethod
+    def read_from_db(cls, user_id=None, user_login=None):
         if user_id:
-            print(1)
             # get user from db by his `id`
-            read_user = ModelUser.query.filter_by(id=user_id).first()
-        elif user_login:
-            print(2)
+            return ModelUser.query.filter_by(id=user_id).first()
+        if user_login:
             # get user from db by his `login`
-            read_user = ModelUser.query.filter_by(user_login=user_login).first()
-        else:
-            print(3)
-            # if id==login==None
-            pass
-        self.user_login = read_user.user_login
-        self.user_password = read_user.user_password
+            return ModelUser.query.filter_by(user_login=user_login).first()
+        return None
 
 
 class UserValidation(Schema):
