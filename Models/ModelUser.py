@@ -10,12 +10,14 @@ class ModelUser(db.Model, UserMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     user_login = db.Column(db.String(50), unique=True, nullable=False)
+    user_email = db.Column(db.String(50), unique=True, nullable=False)
     user_password = db.Column(db.String(50), nullable=False)
     # one to many (User -> Geolocation)
 
 
-    def __init__(self, user_login=None, user_password=None):
+    def __init__(self, user_login=None, user_email=None, user_password=None):
         self.user_login = user_login
+        self.user_email = user_email
         self.user_password = user_password
 
 
