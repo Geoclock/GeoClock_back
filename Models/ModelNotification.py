@@ -7,13 +7,15 @@ class ModelNotification(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     notification = db.Column(db.String(200), nullable=False)
+    radius = db.Column(db.Integer, nullable=False)
     # id of point this notification belongs to
     point_id = db.Column(db.Integer, db.ForeignKey('geolocation.id'))
     point = db.relationship('ModelGeolocation', backref='geolocation', uselist=False)
 
-    def __init__(self, notification=None, point=None):
+    def __init__(self, notification=None, point=None, radius=None):
         self.notification = notification
         self.point = point
+        self.radius = radius
 
     def add_notification_to_db(self):
         db.session.add(self)

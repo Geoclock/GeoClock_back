@@ -1,6 +1,8 @@
 from flask import request
 from app import app
 from Database import db
+from Email import Email
+from flask_mail import Message
 from flask import request, redirect, flash, render_template, url_for
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -9,6 +11,8 @@ from Controller.GeolocationController import GeolocationController
 from Controller.UserController import UserController
 from Models.ModelUser import ModelUser, UserValidation
 from marshmallow import ValidationError
+import random
+import string
 
 
 @app.route("/home")
@@ -16,21 +20,34 @@ def Hello():
     return render_template('home.html', user=current_user)
 
 
+@app.route("/ERROR")
+def ERROR():
+    return "OOPS..."
+
+
+
+
+
 # link to try: http://127.0.0.1:5000/register
 @app.route("/register", methods=['GET', 'POST'])
 def Register():
     login = request.form.get('login')
+    email = request.form.get('email')
     password = request.form.get('password')
     password2 = request.form.get('password2')
     if request.method == 'POST':
-        if not login or not password or not password2:
+        if not login or not email or not password or not password2:
             flash('Please, fill all fields!')
         elif password != password2:
             flash('Passwords are not equal!')
         else:
-            hash_pwd = generate_password_hash(password)
-            ModelUser(user_login=login, user_password=hash_pwd).add_users_to_db()
-            return redirect(url_for('Login'))
+            try:
+                UserValidation().load(request.form)
+                hash_pwd = generate_password_hash(password)
+                ModelUser(user_login=login, user_email=email, user_password=hash_pwd).add_users_to_db()
+                return redirect(url_for('Login'))
+            except ValidationError as error:
+                flash(error)
     return render_template('register.html')
 
 
@@ -70,6 +87,43 @@ def Logout():
     return redirect(url_for('Hello'))
 
 
+@app.route('/ResetPassword', methods=["POST", "GET"])
+def ResetPassword():
+    if request.method == "POST":
+        mail = request.form['email']
+        check = ModelUser.read_from_db(user_email=mail)
+
+        if check:
+            with app.app_context():
+                hashCode = ''.join(random.choices(string.ascii_letters + string.digits, k=24))
+                check.hash_code = hashCode
+                check.commit_changes_to_db()
+                msg = Message('Confirm Password Change', sender = app.config.get('MAIL_USERNAME'), recipients = [mail])
+                msg.body = "Hello,\nWe've received a request to reset your password. If you want to reset your password, click the link below and enter your new password\n http://localhost:5000/" + check.hash_code
+                Email.send(msg)
+                flash("The letter was sent. Please, follow the instructions in the letter")
+        else:
+            flash("The user with such email was not found!")
+    return render_template('reset_password.html')
+
+
+@app.route("/<string:hashCode>", methods=["GET", "POST"])
+def hashcode(hashCode):
+    check = ModelUser.read_from_db(hash_code=hashCode)
+    if check:
+        if request.method == 'POST':
+            password = request.form['password']
+            check_password = request.form['check_password']
+            if password == check_password:
+                check.user_password = generate_password_hash(password)
+                check.hash_code = None
+                check.commit_changes_to_db()
+                return redirect(url_for('Hello'))
+            else:
+                flash('Passwords are different!')
+    return render_template("new_password.html")
+
+
 @app.after_request
 def redirect_to_signin(response):
     if response.status_code == 401:
@@ -103,18 +157,14 @@ def hello_geo():
 
 
 
-
-# link to try: http://127.0.0.1:5000/GeoRead?id=3
+#by user_id
+# link to try: http://127.0.0.1:5000/GeoRead?id=21
 @app.route('/GeoRead', methods=['GET'])
 @login_required
 def read_geo():
-    geo_id = request.args.get('id')
-    read_geo = GeolocationController.read(geo_id=geo_id)
-    if read_geo:
-        return "Latitude : " + str(read_geo.latitude) + "   Longitude : " + str(read_geo.longitude) + "   Radius : " + str(
-        read_geo.radius)
-    else:
-        return "Error!"
+    user_id = request.args.get('id')
+    read_geo = GeolocationController.read(user_id=user_id)
+    return read_geo
 
 
 # link to try: http://127.0.0.1:5000/GeoEdit?id=1&new_radius=20
@@ -184,4 +234,3 @@ def update_notification():
         return "Successfully edited"
     else:
         return "ERROR"
-
