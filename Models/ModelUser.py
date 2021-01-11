@@ -12,13 +12,15 @@ class ModelUser(db.Model, UserMixin):
     user_login = db.Column(db.String(50), unique=True, nullable=False)
     user_email = db.Column(db.String(50), unique=True, nullable=False)
     user_password = db.Column(db.String(50), nullable=False)
+    hash_code = db.Column(db.String(120))
     # one to many (User -> Geolocation)
 
 
-    def __init__(self, user_login=None, user_email=None, user_password=None):
+    def __init__(self, user_login=None, user_email=None, user_password=None, hash_code=None):
         self.user_login = user_login
         self.user_email = user_email
         self.user_password = user_password
+        self.hash_code = hash_code
 
 
     def add_users_to_db(self):
@@ -38,6 +40,7 @@ class ModelUser(db.Model, UserMixin):
 
 class UserValidation(Schema):
     login = fields.String(required=True)
+    email = fields.String(required=True)
     password = fields.String(validate=validate.Length(min=4), required=True)
     #password2 = fields.String(validate=validate.Length(min=4), required=True)
 

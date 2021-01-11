@@ -1,6 +1,12 @@
-from flask import request
+import os
+
+import requests
+from flask import request, session
 from app import app
+#oauth
 from Database import db
+from Email import Email
+from flask_mail import Message
 from flask import request, redirect, flash, render_template, url_for
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -9,27 +15,40 @@ from Controller.GeolocationController import GeolocationController
 from Controller.UserController import UserController
 from Models.ModelUser import ModelUser, UserValidation
 from marshmallow import ValidationError
+import random
+import string
+
+GOOGLE_CLIENT_ID = os.getenv("932239553189-hmn3d3uq3k0khcrsrg8cnd41u5k25k4u.apps.googleusercontent.com")
+GOOGLE_CLIENT_SECRET = os.getenv("sCtlg2gcXa611s5IOsVRUq5Y")
 
 
 @app.route("/home")
 def Hello():
+    # email = dict(session).get('email', None)
+    # print(f'log in as {email}!')
     return render_template('home.html', user=current_user)
+
+
+@app.route("/ERROR")
+def ERROR():
+    return "OOPS..."
 
 
 # link to try: http://127.0.0.1:5000/register
 @app.route("/register", methods=['GET', 'POST'])
 def Register():
     login = request.form.get('login')
+    email = request.form.get('email')
     password = request.form.get('password')
     password2 = request.form.get('password2')
     if request.method == 'POST':
-        if not login or not password or not password2:
+        if not login or not email or not password or not password2:
             flash('Please, fill all fields!')
         elif password != password2:
             flash('Passwords are not equal!')
         else:
             hash_pwd = generate_password_hash(password)
-            ModelUser(user_login=login, user_password=hash_pwd).add_users_to_db()
+            ModelUser(user_login=login, user_email=email, user_password=hash_pwd).add_users_to_db()
             return redirect(url_for('Login'))
     return render_template('register.html')
 
@@ -61,13 +80,84 @@ def Login():
     return render_template('login.html')
 
 
+@app.route('/googleAuth')
+def googleAuth():
+    # google = oauth.create_client('google')
+    # redirect_uri = url_for('authorize', _external=True)
+    # return google.authorize_redirect(redirect_uri)
+    # return google.authorize_redirect('authorize') 400 invalid request
+    if request.args.get("next"):
+        session["next"] = request.args.get("next")
+    return redirect(
+        f"https://accounts.google.com/o/oauth2/v2/auth?scope=https://www.googleapis.com/auth/userinfo.profile&access_type=offline&include_granted_scopes=true&response_type=code&redirect_uri=http://127.0.0.1:5000/authorize&client_id={GOOGLE_CLIENT_ID}")
+
+
+@app.route('/authorize')
+def authorize():
+    '''google = oauth.create_client('google')
+    token = google.authorize_access_token()  # Access token from google
+    print('token is ', token)
+    resp = google.get('userinfo')
+    user_info = resp.json()
+    user = oauth.google.userinfo()
+    session['email'] = user_info
+    session.permanent = True
+    return redirect(url_for('Hello'))'''
+    r = requests.post("https://oauth2.googleapis.com/token", data={
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "code": request.args.get("code"),
+        "grant_type": "authorization_code",
+        "redirect_uri": "http://127.0.0.1:5000/authorize"
+    })
+    #r = requests.get(f'https://www.googleapis.com/oauth2/v2/userinfo?access_token={r.json()["access_token"]}').json()
+    return r.json()
 
 # LOGOUT
 @app.route('/logout')
 @login_required
 def Logout():
     logout_user()
+    for i in list(session.i()):
+        session.pop(i)
     return redirect(url_for('Hello'))
+
+
+@app.route('/ResetPassword', methods=["POST", "GET"])
+def ResetPassword():
+    if request.method == "POST":
+        mail = request.form['email']
+        check = ModelUser.query.filter_by(user_email=mail).first()
+
+        if check:
+            with app.app_context():
+                hashCode = ''.join(random.choices(string.ascii_letters + string.digits, k=24))
+                check.hash_code = hashCode
+                db.session.commit()
+                msg = Message('Confirm Password Change', sender=app.config.get('MAIL_USERNAME'), recipients=[mail])
+                msg.body = "Hello,\nWe've received a request to reset your password. If you want to reset your password, click the link below and enter your new password\n http://localhost:5000/" + check.hash_code
+                Email.send(msg)
+                flash("The letter was sent. Please, follow the instructions in the letter")
+        else:
+            flash("The user with such email was not found!")
+    return render_template('reset_password.html')
+
+
+@app.route("/<string:hashCode>", methods=["GET", "POST"])
+def hashcode(hashCode):
+    check = ModelUser.query.filter_by(hash_code=hashCode).first()
+    if check:
+        if request.method == 'POST':
+            password = request.form['password']
+            check_password = request.form['check_password']
+            if password == check_password:
+                check.user_password = generate_password_hash(password)
+                check.hash_code = None
+                db.session.commit()
+                return redirect(url_for('Hello'))
+            else:
+                flash('Passwords are different!')
+    return render_template("new_password.html")
 
 
 @app.after_request
@@ -81,12 +171,13 @@ def redirect_to_signin(response):
 @app.route('/UserRead', methods=['GET'])
 @login_required
 def read_user():
-    #user_id = request.args.get('id')
+    # user_id = request.args.get('id')
     read_user = UserController.read(user_id=current_user.id)
     if read_user:
         return "For " + read_user.user_login + " password : " + read_user.user_password
     else:
         return "Error!"
+
 
 # link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24
 @app.route('/GeoCreate', methods=['POST'])
@@ -94,16 +185,15 @@ def read_user():
 def hello_geo():
     geo_data = request.form
     if GeolocationController.create(geo_data=geo_data, user_login=current_user.user_login):
-        #return "Success!"
+        # return "Success!"
         flash('Successfully created geolocation!')
     else:
-        #return "Create failed!"
+        # return "Create failed!"
         flash('Creation failed!')
     return redirect(url_for('Hello'))
 
 
-
-#by user_id
+# by user_id
 # link to try: http://127.0.0.1:5000/GeoRead?id=21
 @app.route('/GeoRead', methods=['GET'])
 @login_required

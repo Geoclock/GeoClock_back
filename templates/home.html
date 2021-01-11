@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Home page</title>
+    <meta name="google-signin-client_id" content="932239553189-h3ml7qlutr5tp5277lf698skmchcahuq.apps.googleusercontent.com">
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
 </head>
 <body>
 <!-- Print message passed by `flash` function -->
@@ -15,6 +17,7 @@
         </ul>
     {% endif %}
 {% endwith %}
+
 
 {% if(user.is_authenticated) %}
     <h3>Hello {{ user.user_login }}</h3>
@@ -54,7 +57,14 @@
             <!-- Redirect to login form -->
             <td><a href="{{ url_for('Login') }}" >Login</a></td>
         </tr>
-
+        <tr>
+            <!-- Redirect to reset password form -->
+            <td><a href="{{ url_for('ResetPassword') }}" >Reset Password</a></td>
+        </tr>
+         <tr>
+            <!-- Redirect to google sign in form -->
+            <td><a href="{{ url_for('googleAuth') }}" >Sign in with google</a></td>
+        </tr>
     </table>
 {% endif %}
 
