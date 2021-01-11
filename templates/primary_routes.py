@@ -1,6 +1,8 @@
 from flask import request
 from app import app
 from Database import db
+from Email import Email
+from flask_mail import Message
 from flask import request, redirect, flash, render_template, url_for
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -18,6 +20,11 @@ def Hello():
     return render_template('home.html', user=current_user)
 
 
+@app.route("/ERROR")
+def ERROR():
+    return "OOPS..."
+
+
 # link to try: http://127.0.0.1:5000/register
 @app.route("/register", methods=['GET', 'POST'])
 def Register():
@@ -32,7 +39,7 @@ def Register():
             flash('Passwords are not equal!')
         else:
             hash_pwd = generate_password_hash(password)
-            ModelUser(user_login=login, user_password=hash_pwd).add_users_to_db()
+            ModelUser(user_login=login, user_email = email, user_password=hash_pwd).add_users_to_db()
             return redirect(url_for('Login'))
     return render_template('register.html')
 
@@ -71,6 +78,43 @@ def Login():
 def Logout():
     logout_user()
     return redirect(url_for('Hello'))
+
+
+@app.route('/ResetPassword', methods=["POST", "GET"])
+def ResetPassword():
+    if request.method == "POST":
+        mail = request.form['email']
+        check = ModelUser.query.filter_by(user_email=mail).first()
+
+        if check:
+            with app.app_context():
+                hashCode = ''.join(random.choices(string.ascii_letters + string.digits, k=24))
+                check.hash_code = hashCode
+                db.session.commit()
+                msg = Message('Confirm Password Change', sender = app.config.get('MAIL_USERNAME'), recipients = [mail])
+                msg.body = "Hello,\nWe've received a request to reset your password. If you want to reset your password, click the link below and enter your new password\n http://localhost:5000/" + check.hash_code
+                Email.send(msg)
+                flash("The letter was sent. Please, follow the instructions in the letter")
+        else:
+            flash("The user with such email was not found!")
+    return render_template('reset_password.html')
+
+
+@app.route("/<string:hashCode>", methods=["GET", "POST"])
+def hashcode(hashCode):
+    check = ModelUser.query.filter_by(hash_code=hashCode).first()
+    if check:
+        if request.method == 'POST':
+            password = request.form['password']
+            check_password = request.form['check_password']
+            if password == check_password:
+                check.user_password = generate_password_hash(password)
+                check.hash_code = None
+                db.session.commit()
+                return redirect(url_for('Hello'))
+            else:
+                flash('Passwords are different!')
+    return render_template("new_password.html")
 
 
 @app.after_request
