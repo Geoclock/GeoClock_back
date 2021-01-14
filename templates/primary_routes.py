@@ -23,7 +23,7 @@ def Hello():
 
 @app.route("/ERROR")
 def ERROR():
-    return "OOPS..."
+    return "OOOOOPS..."
 
 
 # link to try: http://127.0.0.1:5000/register
