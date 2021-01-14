@@ -9,6 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from Controller.NotificationController import NotificationController
 from Controller.GeolocationController import GeolocationController
 from Controller.UserController import UserController
+from Controller.FolderController import FolderController
 from Models.ModelUser import ModelUser, UserValidation
 from marshmallow import ValidationError
 import random
@@ -25,9 +26,6 @@ def ERROR():
     return "OOPS..."
 
 
-
-
-
 # link to try: http://127.0.0.1:5000/register
 @app.route("/register", methods=['GET', 'POST'])
 def Register():
@@ -38,13 +36,18 @@ def Register():
     if request.method == 'POST':
         if not login or not email or not password or not password2:
             flash('Please, fill all fields!')
+        elif ModelUser.read_from_db(user_login=login) or ModelUser.read_from_db(user_email=email):
+            flash('User with such login/email already exist!')
         elif password != password2:
             flash('Passwords are not equal!')
         else:
             try:
                 UserValidation().load(request.form)
                 hash_pwd = generate_password_hash(password)
-                ModelUser(user_login=login, user_email=email, user_password=hash_pwd).add_users_to_db()
+                new_user = ModelUser(user_login=login, user_email=email, user_password=hash_pwd)
+                new_user.add_users_to_db()
+                """При створенні нового юзера створюємо йому дефолтну папочку"""
+                FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
                 return redirect(url_for('Login'))
             except ValidationError as error:
                 flash(error)
@@ -78,7 +81,6 @@ def Login():
     return render_template('login.html')
 
 
-
 # LOGOUT
 @app.route('/logout')
 @login_required
@@ -98,7 +100,7 @@ def ResetPassword():
                 hashCode = ''.join(random.choices(string.ascii_letters + string.digits, k=24))
                 check.hash_code = hashCode
                 check.commit_changes_to_db()
-                msg = Message('Confirm Password Change', sender = app.config.get('MAIL_USERNAME'), recipients = [mail])
+                msg = Message('Confirm Password Change', sender=app.config.get('MAIL_USERNAME'), recipients=[mail])
                 msg.body = "Hello,\nWe've received a request to reset your password. If you want to reset your password, click the link below and enter your new password\n http://localhost:5000/" + check.hash_code
                 Email.send(msg)
                 flash("The letter was sent. Please, follow the instructions in the letter")
@@ -131,106 +133,129 @@ def redirect_to_signin(response):
     return response
 
 
-# link to try: http://127.0.0.1:5000/UserRead
-@app.route('/UserRead', methods=['GET'])
+@app.route('/FolderRead', methods=['GET'])
 @login_required
-def read_user():
-    #user_id = request.args.get('id')
-    read_user = UserController.read(user_id=current_user.id)
-    if read_user:
-        return "For " + read_user.user_login + " password : " + read_user.user_password
-    else:
-        return "Error!"
+def read_folder():
+    return FolderController.read(user_id=current_user.id)
 
-# link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24
-@app.route('/GeoCreate', methods=['POST'])
+
+def render_create_folder():
+    folder_list = read_folder()
+    geo_list = FolderController.read_folders_geo(folder_list=folder_list)
+    return render_template('create_folder.html',
+                           folder_list=folder_list,
+                           geo_list=geo_list)
+
+
+@app.route('/FolderCreate', methods=['POST', 'GET', 'PUT'])
 @login_required
-def hello_geo():
-    geo_data = request.form
-    if GeolocationController.create(geo_data=geo_data, user_login=current_user.user_login):
-        #return "Success!"
-        flash('Successfully created geolocation!')
-    else:
-        #return "Create failed!"
-        flash('Creation failed!')
-    return redirect(url_for('Hello'))
+def create_folder():
+    if request.method == "POST":
+        folder_data = request.form.to_dict()
+        folder_data['created_by_user'] = 1
+        FolderController.create(user_id=current_user.id,
+                                folder_data=folder_data)
+    return render_create_folder()
 
 
-
-#by user_id
-# link to try: http://127.0.0.1:5000/GeoRead?id=21
-@app.route('/GeoRead', methods=['GET'])
+@app.route('/FolderEdit', methods=['POST', 'GET', 'PUT'])
 @login_required
-def read_geo():
-    user_id = request.args.get('id')
-    read_geo = GeolocationController.read(user_id=user_id)
-    return read_geo
+def edit_folder():
+    if request.method == "POST":
+        folder_data = request.form.to_dict()
+        folder_id = folder_data.get('id')
+        FolderController.edit(folder_id=folder_id,
+                              folder_data=folder_data)
+    return render_create_folder()
 
 
-# link to try: http://127.0.0.1:5000/GeoEdit?id=1&new_radius=20
-@app.route('/GeoEdit', methods=['PUT'])
+@app.route('/FolderDelete', methods=['POST', 'GET', 'PUT', 'DELETE'])
 @login_required
-def update_geo():
-    geo_id = request.args.get('id')
-    geo_data = request.args
-    if GeolocationController.edit(geo_id=geo_id, geo_data=geo_data):
-        return "Successfully edited"
-    else:
-        return "ERROR"
+def delete_folder():
+    if request.method == "POST":
+        folder_data = request.form.to_dict()
+        folder_id = folder_data.get('id')
+        FolderController.delete(folder_id=folder_id)
+    return render_create_folder()
 
 
-# link to try: http://127.0.0.1:5000/GeoDelete?id=1
-@app.route('/GeoDelete', methods=['DELETE'])
+def render_create_geo():
+    folder_list = read_folder()
+    geo_list = FolderController.read_folders_geo(folder_list=folder_list)
+    return render_template('create_geo.html',
+                           folder_list=folder_list,
+                           geo_list=geo_list)
+
+
+@app.route('/GeoCreate', methods=['POST', 'GET', 'PUT'])
+@login_required
+def create_geo():
+    if request.method == "POST":
+        geo_data = request.form.to_dict()
+        GeolocationController.create(user_id=current_user.id,
+                                     geo_data=geo_data)
+    return render_create_geo()
+
+
+@app.route('/GeoEdit', methods=['POST', 'GET', 'PUT'])
+@login_required
+def edit_geo():
+    if request.method == "POST":
+        geo_data = request.form.to_dict()
+        geo_id = geo_data.get('id')
+        GeolocationController.edit(geo_data=geo_data,
+                                   geo_id=geo_id)
+    return render_create_geo()
+
+
+@app.route('/GeoDelete', methods=['POST', 'GET', 'PUT', 'DELETE'])
 @login_required
 def delete_geo():
-    geolocation_id = request.args.get('id')
-    if GeolocationController.delete(geo_id=geolocation_id):
-        return "Successfully deleted"
-    else:
-        return "ERROR"
+    if request.method == "POST":
+        geo_data = request.form.to_dict()
+        geo_id = geo_data.get('id')
+        GeolocationController.delete(geo_id=geo_id)
+    return render_create_geo()
 
 
-# link to try: http://127.0.0.1:5000/NotCreate?not=Have_a_good_day&geo_id=1)
-@app.route('/NotCreate', methods=['POST'])
+def render_create_note():
+    folder_list = read_folder()
+    geo_list = FolderController.read_folders_geo(folder_list=folder_list)
+    note_list = NotificationController.read(user_id=current_user.id)
+    notes_geos = NotificationController.read_notes_geo(note_list=note_list)
+    return render_template('create_note.html',
+                           note_list=note_list,
+                           notes_geos=notes_geos,
+                           folder_list=folder_list,
+                           geo_list=geo_list)
+
+
+@app.route('/NoteCreate', methods=['POST', 'GET', 'PUT'])
 @login_required
-def hello_not():
-    notification_data = request.args
-    if NotificationController.create(not_data=notification_data):
-        return "Success!"
-    else:
-        return "Create failed!"
+def create_note():
+    if request.method == "POST":
+        note_data = request.form.to_dict()
+        NotificationController.create(user_id=current_user.id,
+                                      not_data=note_data)
+    return render_create_note()
 
 
-# link to try: http://127.0.0.1:5000/NotRead?id=1
-@app.route('/NotRead', methods=['GET'])
+@app.route('/NoteEdit', methods=['POST', 'GET', 'PUT'])
 @login_required
-def read_not():
-    notification_id = request.args.get('id')
-    read_notification = NotificationController.read(not_id=notification_id)
-    if read_notification:
-        return "Message : " + read_notification.notification
-    else:
-        return "Error!"
+def edit_note():
+    if request.method == "POST":
+        note_data = request.form.to_dict()
+        not_id = note_data.get('id')
+        NotificationController.edit(not_id=not_id,
+                                    not_data=note_data)
+    return render_create_note()
 
 
-# link to try: http://127.0.0.1:5000/NotDelete?id=1
-@app.route('/NotDelete', methods=['DELETE'])
+@app.route('/NoteDelete', methods=['POST', 'GET', 'PUT', 'DELETE'])
 @login_required
-def delete_not():
-    notification_id = request.args.get('id')
-    if NotificationController.delete(not_id=notification_id):
-        return "Successfully deleted"
-    else:
-        return "Error!"
-
-
-# link to try: http://127.0.0.1:5000/NotEdit?id=1&notification=newtext
-@app.route('/NotEdit', methods=['PUT'])
-@login_required
-def update_notification():
-    not_data = request.args
-    not_id = request.args.get('id')
-    if NotificationController.edit(not_id=not_id, not_data=not_data):
-        return "Successfully edited"
-    else:
-        return "ERROR"
+def delete_note():
+    if request.method == "POST":
+        note_data = request.form.to_dict()
+        not_id = note_data.get('id')
+        NotificationController.delete(not_id=not_id)
+    return render_create_note()

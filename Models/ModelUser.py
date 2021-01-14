@@ -5,7 +5,6 @@ from marshmallow import Schema, fields, validate, ValidationError
 
 
 class ModelUser(db.Model, UserMixin):
-
     __tablename__ = 'user'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -13,15 +12,17 @@ class ModelUser(db.Model, UserMixin):
     user_email = db.Column(db.String(50), unique=True, nullable=False)
     user_password = db.Column(db.String(50), nullable=False)
     hash_code = db.Column(db.String(120))
-    # one to many (User -> Geolocation)
+    default_folder_id = db.Column(db.Integer)
 
-
-    def __init__(self, user_login=None, user_email=None, user_password=None, hash_code=None):
+    def __init__(self, user_login=None,
+                 user_email=None,
+                 user_password=None,
+                 hash_code=None):
         self.user_login = user_login
         self.user_email = user_email
         self.user_password = user_password
         self.hash_code = hash_code
-
+        self.default_folder_id = None
 
     def add_users_to_db(self):
         db.session.add(self)
@@ -31,7 +32,10 @@ class ModelUser(db.Model, UserMixin):
         db.session.commit()
 
     @classmethod
-    def read_from_db(cls, user_id=None, user_login=None, user_email=None, hash_code=None):
+    def read_from_db(cls, user_id=None,
+                     user_login=None,
+                     user_email=None,
+                     hash_code=None):
         if user_id:
             # get user from db by his `id`
             return ModelUser.query.filter_by(id=user_id).first()
