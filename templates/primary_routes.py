@@ -1,4 +1,4 @@
-from flask import request
+﻿from flask import request
 from app import app
 from Database import db
 from Email import Email
@@ -23,7 +23,7 @@ def Hello():
 
 @app.route("/ERROR")
 def ERROR():
-    return "OOPS..."
+    return "OOPS....."
 
 
 # link to try: http://127.0.0.1:5000/register
