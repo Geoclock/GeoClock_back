@@ -336,3 +336,4 @@ def delete_note():
         not_id = note_data.get('id')
         NotificationController.delete(not_id=not_id)
     return render_create_note()
+
