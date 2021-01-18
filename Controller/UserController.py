@@ -4,8 +4,8 @@ from Database import db
 from app import app
 from flask import redirect, flash, render_template, url_for, request
 
-class UserController(object):
 
+class UserController(object):
 
     @classmethod
     def read(cls, user_id=None, user_login=None):

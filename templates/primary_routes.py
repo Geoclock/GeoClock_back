@@ -1,9 +1,5 @@
-import os
-
-import requests
-from flask import request, session
-from app import app
-#oauth
+from flask import request
+from app import app,oauth,google
 from Database import db
 from Email import Email
 from flask_mail import Message
@@ -13,19 +9,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from Controller.NotificationController import NotificationController
 from Controller.GeolocationController import GeolocationController
 from Controller.UserController import UserController
+from Controller.FolderController import FolderController
 from Models.ModelUser import ModelUser, UserValidation
 from marshmallow import ValidationError
 import random
 import string
 
-GOOGLE_CLIENT_ID = os.getenv("932239553189-hmn3d3uq3k0khcrsrg8cnd41u5k25k4u.apps.googleusercontent.com")
-GOOGLE_CLIENT_SECRET = os.getenv("sCtlg2gcXa611s5IOsVRUq5Y")
-
 
 @app.route("/home")
 def Hello():
-    # email = dict(session).get('email', None)
-    # print(f'log in as {email}!')
     return render_template('home.html', user=current_user)
 
 
@@ -35,7 +27,7 @@ def ERROR():
 
 
 # link to try: http://127.0.0.1:5000/register
-@app.route("/register", methods=['GET', 'POST'])
+@app.route("/Register", methods=['GET', 'POST'])
 def Register():
     login = request.form.get('login')
     email = request.form.get('email')
@@ -44,18 +36,30 @@ def Register():
     if request.method == 'POST':
         if not login or not email or not password or not password2:
             flash('Please, fill all fields!')
+        elif ModelUser.read_from_db(user_login=login) or ModelUser.read_from_db(user_email=email):
+            flash('User with such login/email already exist!')
         elif password != password2:
             flash('Passwords are not equal!')
         else:
-            hash_pwd = generate_password_hash(password)
-            ModelUser(user_login=login, user_email=email, user_password=hash_pwd).add_users_to_db()
-            return redirect(url_for('Login'))
+            try:
+                UserValidation().load(request.form)
+                hash_pwd = generate_password_hash(password)
+                new_user = ModelUser(user_login=login, user_email=email, user_password=hash_pwd)
+                new_user.add_users_to_db()
+                """При створенні нового юзера створюємо йому дефолтну папочку"""
+                FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
+                return redirect(url_for('Login'))
+            except ValidationError as error:
+                flash(error)
     return render_template('register.html')
+
+
+
 
 
 # LOGIN
 # link to try: http://127.0.0.1:5000/login
-@app.route("/login", methods=['GET', 'POST'])
+@app.route("/Login", methods=['GET', 'POST'])
 def Login():
     login = request.form.get('login')
     password = request.form.get('password')
@@ -80,46 +84,85 @@ def Login():
     return render_template('login.html')
 
 
-@app.route('/googleAuth')
-def googleAuth():
-    # google = oauth.create_client('google')
-    # redirect_uri = url_for('authorize', _external=True)
-    # return google.authorize_redirect(redirect_uri)
-    # return google.authorize_redirect('authorize') 400 invalid request
-    if request.args.get("next"):
-        session["next"] = request.args.get("next")
-    return redirect(
-        f"https://accounts.google.com/o/oauth2/v2/auth?scope=https://www.googleapis.com/auth/userinfo.profile&access_type=offline&include_granted_scopes=true&response_type=code&redirect_uri=http://127.0.0.1:5000/authorize&client_id={GOOGLE_CLIENT_ID}")
+# Google register
+@app.route('/register')
+def google_register():
+    google = oauth.create_client('google')
+    redirect_uri = url_for('authorize_new_account', _external=True)
+    return google.authorize_redirect(redirect_uri)
 
+# Google login
+@app.route('/login')
+def google_login():
+    google = oauth.create_client('google')
+    redirect_uri = url_for('authorize', _external=True)
+    return google.authorize_redirect(redirect_uri)
 
+# google authorize
 @app.route('/authorize')
 def authorize():
-    '''google = oauth.create_client('google')
-    token = google.authorize_access_token()  # Access token from google
-    print('token is ', token)
-    resp = google.get('userinfo')
+    google = oauth.create_client('google')  # create the google oauth client
+    token = google.authorize_access_token()  # Access token from google (needed to get user info)
+    resp = google.get('userinfo')  # userinfo contains stuff u specificed in the scrope
     user_info = resp.json()
     user = oauth.google.userinfo()
-    session['email'] = user_info
-    session.permanent = True
-    return redirect(url_for('Hello'))'''
-    r = requests.post("https://oauth2.googleapis.com/token", data={
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "code": request.args.get("code"),
-        "grant_type": "authorization_code",
-        "redirect_uri": "http://127.0.0.1:5000/authorize"
-    })
-    #r = requests.get(f'https://www.googleapis.com/oauth2/v2/userinfo?access_token={r.json()["access_token"]}').json()
-    return r.json()
+    print(user)
+    print(user_info)
+    user_email=user_info['email']
+    user = ModelUser.read_from_db(user_email=user_email)
+    # checking existing & entered password
+    if user:
+        login_user(user, remember=True)
+        return redirect(url_for('Hello'))
+    flash('User isn`t registered. Start with register!')
+    return render_template('login.html')
+
+
+@app.route('/authorize_new_account')
+def authorize_new_account():
+    google = oauth.create_client('google')  # create the google oauth client
+    token = google.authorize_access_token()  # Access token from google (needed to get user info)
+    resp = google.get('userinfo')  # userinfo contains stuff u specificed in the scrope
+    user_info = resp.json()
+    login = user_info['name']
+    email = user_info['email']
+    print(user_info)
+    #return GoogleRegister(login=login,email=email)
+    return render_template('google_register.html',login=login,email=email)
+
+@app.route("/GoogleRegister", methods=['GET', 'POST'])
+def GoogleRegister():
+    login = request.form.get('login')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    password2 = request.form.get('password2')
+    if request.method == 'POST':
+        if not password or not password2:
+            flash('Please, fill all fields!')
+        elif ModelUser.read_from_db(user_login=login) or ModelUser.read_from_db(user_email=email):
+            flash('User with such login/email already exist!')
+        elif password != password2:
+            flash('Passwords are not equal!')
+        else:
+            try:
+                UserValidation().load(request.form)
+                hash_pwd = generate_password_hash(password)
+                new_user = ModelUser(user_login=login, user_email=email, user_password=hash_pwd)
+                new_user.add_users_to_db()
+                """При створенні нового юзера створюємо йому дефолтну папочку"""
+                FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
+                return redirect(url_for('Login'))
+            except ValidationError as error:
+                flash(error)
+    return render_template('google_register.html',login=login,email=email)
+
+
 
 # LOGOUT
 @app.route('/logout')
 @login_required
 def Logout():
     logout_user()
-    for i in list(session.i()):
-        session.pop(i)
     return redirect(url_for('Hello'))
 
 
@@ -127,13 +170,13 @@ def Logout():
 def ResetPassword():
     if request.method == "POST":
         mail = request.form['email']
-        check = ModelUser.query.filter_by(user_email=mail).first()
+        check = ModelUser.read_from_db(user_email=mail)
 
         if check:
             with app.app_context():
                 hashCode = ''.join(random.choices(string.ascii_letters + string.digits, k=24))
                 check.hash_code = hashCode
-                db.session.commit()
+                check.commit_changes_to_db()
                 msg = Message('Confirm Password Change', sender=app.config.get('MAIL_USERNAME'), recipients=[mail])
                 msg.body = "Hello,\nWe've received a request to reset your password. If you want to reset your password, click the link below and enter your new password\n http://localhost:5000/" + check.hash_code
                 Email.send(msg)
@@ -145,7 +188,7 @@ def ResetPassword():
 
 @app.route("/<string:hashCode>", methods=["GET", "POST"])
 def hashcode(hashCode):
-    check = ModelUser.query.filter_by(hash_code=hashCode).first()
+    check = ModelUser.read_from_db(hash_code=hashCode)
     if check:
         if request.method == 'POST':
             password = request.form['password']
@@ -153,7 +196,7 @@ def hashcode(hashCode):
             if password == check_password:
                 check.user_password = generate_password_hash(password)
                 check.hash_code = None
-                db.session.commit()
+                check.commit_changes_to_db()
                 return redirect(url_for('Hello'))
             else:
                 flash('Passwords are different!')
@@ -167,106 +210,129 @@ def redirect_to_signin(response):
     return response
 
 
-# link to try: http://127.0.0.1:5000/UserRead
-@app.route('/UserRead', methods=['GET'])
+@app.route('/FolderRead', methods=['GET'])
 @login_required
-def read_user():
-    # user_id = request.args.get('id')
-    read_user = UserController.read(user_id=current_user.id)
-    if read_user:
-        return "For " + read_user.user_login + " password : " + read_user.user_password
-    else:
-        return "Error!"
+def read_folder():
+    return FolderController.read(user_id=current_user.id)
 
 
-# link to try: http://127.0.0.1:5000/GeoCreate?lat=14.25&lon=21.52&radius=24
-@app.route('/GeoCreate', methods=['POST'])
+def render_create_folder():
+    folder_list = read_folder()
+    geo_list = FolderController.read_folders_geo(folder_list=folder_list)
+    return render_template('create_folder.html',
+                           folder_list=folder_list,
+                           geo_list=geo_list)
+
+
+@app.route('/FolderCreate', methods=['POST', 'GET', 'PUT'])
 @login_required
-def hello_geo():
-    geo_data = request.form
-    if GeolocationController.create(geo_data=geo_data, user_login=current_user.user_login):
-        # return "Success!"
-        flash('Successfully created geolocation!')
-    else:
-        # return "Create failed!"
-        flash('Creation failed!')
-    return redirect(url_for('Hello'))
+def create_folder():
+    if request.method == "POST":
+        folder_data = request.form.to_dict()
+        folder_data['created_by_user'] = 1
+        FolderController.create(user_id=current_user.id,
+                                folder_data=folder_data)
+    return render_create_folder()
 
 
-# by user_id
-# link to try: http://127.0.0.1:5000/GeoRead?id=21
-@app.route('/GeoRead', methods=['GET'])
+@app.route('/FolderEdit', methods=['POST', 'GET', 'PUT'])
 @login_required
-def read_geo():
-    user_id = request.args.get('id')
-    read_geo = GeolocationController.read(user_id=user_id)
-    return read_geo
+def edit_folder():
+    if request.method == "POST":
+        folder_data = request.form.to_dict()
+        folder_id = folder_data.get('id')
+        FolderController.edit(folder_id=folder_id,
+                              folder_data=folder_data)
+    return render_create_folder()
 
 
-# link to try: http://127.0.0.1:5000/GeoEdit?id=1&new_radius=20
-@app.route('/GeoEdit', methods=['PUT'])
+@app.route('/FolderDelete', methods=['POST', 'GET', 'PUT', 'DELETE'])
 @login_required
-def update_geo():
-    geo_id = request.args.get('id')
-    geo_data = request.args
-    if GeolocationController.edit(geo_id=geo_id, geo_data=geo_data):
-        return "Successfully edited"
-    else:
-        return "ERROR"
+def delete_folder():
+    if request.method == "POST":
+        folder_data = request.form.to_dict()
+        folder_id = folder_data.get('id')
+        FolderController.delete(folder_id=folder_id)
+    return render_create_folder()
 
 
-# link to try: http://127.0.0.1:5000/GeoDelete?id=1
-@app.route('/GeoDelete', methods=['DELETE'])
+def render_create_geo():
+    folder_list = read_folder()
+    geo_list = FolderController.read_folders_geo(folder_list=folder_list)
+    return render_template('create_geo.html',
+                           folder_list=folder_list,
+                           geo_list=geo_list)
+
+
+@app.route('/GeoCreate', methods=['POST', 'GET', 'PUT'])
+@login_required
+def create_geo():
+    if request.method == "POST":
+        geo_data = request.form.to_dict()
+        GeolocationController.create(user_id=current_user.id,
+                                     geo_data=geo_data)
+    return render_create_geo()
+
+
+@app.route('/GeoEdit', methods=['POST', 'GET', 'PUT'])
+@login_required
+def edit_geo():
+    if request.method == "POST":
+        geo_data = request.form.to_dict()
+        geo_id = geo_data.get('id')
+        GeolocationController.edit(geo_data=geo_data,
+                                   geo_id=geo_id)
+    return render_create_geo()
+
+
+@app.route('/GeoDelete', methods=['POST', 'GET', 'PUT', 'DELETE'])
 @login_required
 def delete_geo():
-    geolocation_id = request.args.get('id')
-    if GeolocationController.delete(geo_id=geolocation_id):
-        return "Successfully deleted"
-    else:
-        return "ERROR"
+    if request.method == "POST":
+        geo_data = request.form.to_dict()
+        geo_id = geo_data.get('id')
+        GeolocationController.delete(geo_id=geo_id)
+    return render_create_geo()
 
 
-# link to try: http://127.0.0.1:5000/NotCreate?not=Have_a_good_day&geo_id=1)
-@app.route('/NotCreate', methods=['POST'])
+def render_create_note():
+    folder_list = read_folder()
+    geo_list = FolderController.read_folders_geo(folder_list=folder_list)
+    note_list = NotificationController.read(user_id=current_user.id)
+    notes_geos = NotificationController.read_notes_geo(note_list=note_list)
+    return render_template('create_note.html',
+                           note_list=note_list,
+                           notes_geos=notes_geos,
+                           folder_list=folder_list,
+                           geo_list=geo_list)
+
+
+@app.route('/NoteCreate', methods=['POST', 'GET', 'PUT'])
 @login_required
-def hello_not():
-    notification_data = request.args
-    if NotificationController.create(not_data=notification_data):
-        return "Success!"
-    else:
-        return "Create failed!"
+def create_note():
+    if request.method == "POST":
+        note_data = request.form.to_dict()
+        NotificationController.create(user_id=current_user.id,
+                                      not_data=note_data)
+    return render_create_note()
 
 
-# link to try: http://127.0.0.1:5000/NotRead?id=1
-@app.route('/NotRead', methods=['GET'])
+@app.route('/NoteEdit', methods=['POST', 'GET', 'PUT'])
 @login_required
-def read_not():
-    notification_id = request.args.get('id')
-    read_notification = NotificationController.read(not_id=notification_id)
-    if read_notification:
-        return "Message : " + read_notification.notification
-    else:
-        return "Error!"
+def edit_note():
+    if request.method == "POST":
+        note_data = request.form.to_dict()
+        not_id = note_data.get('id')
+        NotificationController.edit(not_id=not_id,
+                                    not_data=note_data)
+    return render_create_note()
 
 
-# link to try: http://127.0.0.1:5000/NotDelete?id=1
-@app.route('/NotDelete', methods=['DELETE'])
+@app.route('/NoteDelete', methods=['POST', 'GET', 'PUT', 'DELETE'])
 @login_required
-def delete_not():
-    notification_id = request.args.get('id')
-    if NotificationController.delete(not_id=notification_id):
-        return "Successfully deleted"
-    else:
-        return "Error!"
-
-
-# link to try: http://127.0.0.1:5000/NotEdit?id=1&notification=newtext
-@app.route('/NotEdit', methods=['PUT'])
-@login_required
-def update_notification():
-    not_data = request.args
-    not_id = request.args.get('id')
-    if NotificationController.edit(not_id=not_id, not_data=not_data):
-        return "Successfully edited"
-    else:
-        return "ERROR"
+def delete_note():
+    if request.method == "POST":
+        note_data = request.form.to_dict()
+        not_id = note_data.get('id')
+        NotificationController.delete(not_id=not_id)
+    return render_create_note()

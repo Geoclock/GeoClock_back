@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create notification</title>
+</head>
+<body>
+
+<h4>Create new notification</h4>
+<form method="POST" action="/NoteCreate">
+    <table>
+        <tr>
+            <td>Geolocation id to subject with : </td>
+            <td><input type="number" name="geo_id" min="1"></td>
+        </tr>
+        <tr>
+            <td>Text : </td>
+            <td><input type="text" name="note"></td>
+        </tr>
+        <tr>
+            <td>Radius of coverage : </td>
+            <td><input type="number" name="radius"></td>
+        </tr>
+        <tr>
+                <td><input type="submit"></td>
+        </tr>
+
+    </table>
+</form>
+
+<h4>Edit existing notification</h4>
+<form method="POST" action="/NoteEdit">
+    <table>
+        <tr>
+            <td>Notification id : </td>
+            <td><input type="number" name="id" min="1"></td>
+        </tr>
+        <tr>
+            <td>New text : </td>
+            <td><input type="text" name="note"></td>
+        </tr>
+        <tr>
+            <td>New adius of coverage : </td>
+            <td><input type="number" name="radius"></td>
+        </tr>
+        <tr>
+                <td><input type="submit"></td>
+        </tr>
+
+    </table>
+</form>
+
+<h4>DeleteEdit existing notification</h4>
+<form method="POST" action="/NoteDelete">
+    <table>
+        <tr>
+            <td>Notification id : </td>
+            <td><input type="number" name="id" min="1"></td>
+        </tr>
+        <tr>
+                <td><input type="submit"></td>
+        </tr>
+
+    </table>
+</form>
+
+
+
+<table>
+    <tr>
+            <!-- Redirect to register form -->
+            <td><a href="{{ url_for('Hello') }}" >Home</a></td>
+    </tr>
+</table>
+
+<p><br />Existing notification : </p>
+<table>
+    {% for note in note_list %}
+    <tr>
+        <td>
+            <pre>
+                id = {{ note.id }}
+                text = {{ note.notification }} ( {{ note.radius }} meters )
+                Address : {{ notes_geos[note.id].geo_address }}
+            </pre>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+
+
+<p><br/>Existing folders :</p>
+<table>
+            {% for folder in folder_list %}
+            <tr>
+                <td>id = {{ folder.id }}
+                {% if folder.folder_name == None %}
+                    DEFAULT
+                {% else %}
+                    name = {{ folder.folder_name }}
+                {% endif %}
+                </td>
+            </tr><tr>
+                <td>
+                {% for geo in geo_list[folder.id] %}
+                    <pre>&#9; Geolocation ( {{ geo.geo_name }}, {{ geo.id }}) : {{ geo.geo_address }}</pre>
+                {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+</table>
+
+</body>
+</html>
