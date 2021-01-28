@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create folder</title>
+</head>
+<body>
+<h4>Create new folder</h4>
+<form method="POST" action="/FolderCreate">
+    <table>
+        <tr>
+            <td>Folder name : </td>
+            <td><input type="text" name="name"></td>
+        </tr>
+        <tr>
+                <td><input type="submit"></td>
+        </tr>
+
+    </table>
+</form>
+
+<h4>Edit existing folder</h4>
+<form method="POST" action="/FolderEdit">
+    <table>
+        <tr>
+            <td>Folder id : </td>
+            <td><input type="number" name="id" min="1"></td>
+        </tr>
+        <tr>
+            <td>New folder name : </td>
+            <td><input type="text" name="name"></td>
+        </tr>
+        <tr>
+                <td><input type="submit"></td>
+        </tr>
+
+    </table>
+</form>
+
+<h4>Delete existing folder</h4>
+<form method="POST" action="/FolderDelete">
+    <table>
+        <tr>
+            <td>Folder id : </td>
+            <td><input type="number" name="id" min="1"></td>
+        </tr>
+        <tr>
+                <td><input type="submit"></td>
+        </tr>
+    </table>
+</form>
+
+<table>
+    <tr>
+            <!-- Redirect to register form -->
+            <td><a href="{{ url_for('Hello') }}" >Home</a></td>
+    </tr>
+</table>
+
+<p><br/>Existing folders :</p>
+<table>
+            {% for folder in folder_list %}
+            <tr>
+                <td>id = {{ folder.id }}
+                {% if folder.folder_name == None %}
+                    DEFAULT
+                {% else %}
+                    name = {{ folder.folder_name }}
+                {% endif %}
+                </td>
+            </tr><tr>
+                <td>
+                {% for geo in geo_list[folder.id] %}
+                    <pre>&#9; Geolocation ( {{ geo.geo_name }}, {{ geo.id }}) : {{ geo.geo_address }}</pre>
+                {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+</table>
+
+</body>
+</html>

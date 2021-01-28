@@ -31,8 +31,10 @@
             <td><input type="password" name="password"></td>
         </tr>
         <tr>
+            <td><a href="{{ url_for('google_login') }}" >Google login</a></td>
             <!-- Redirect to register form -->
             <td><a href="{{ url_for('Register') }}" >Register</a></td>
+            <td><a href="{{ url_for('ResetPassword') }}" >Reset Password</a></td>
             <td><input type="submit"></td>
 
         </tr>
