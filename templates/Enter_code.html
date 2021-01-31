@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reset the password</title>
+</head>
+<body>
+<!-- Print message passed by `flash` function -->
+{% with messages = get_flashed_messages() %}
+    {%  if messages %}
+        <ul class=flashes>
+            {%  for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+<form method="POST">
+    <h3>Please, enter the code you received in the letter</h3>
+    <table>
+        <tr>
+            <td>Code</td>
+            <td><input type="text" name="code" id="code"></td>
+        </tr>
+        <tr>
+            <td><a href="{{ url_for('Hello') }}" >Home</a></td>
+        </tr>
+    </table>
+</form>
