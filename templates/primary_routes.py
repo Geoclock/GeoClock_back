@@ -204,7 +204,6 @@ def hashcode(hashCode):
         if not password or not check_password:
             return jsonify(status=400, message="Missing values!")
         if password == check_password:
-            print(1)
             check.user_password = generate_password_hash(password)
             check.hash_code = None
             check.commit_changes_to_db()
