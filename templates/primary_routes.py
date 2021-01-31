@@ -35,11 +35,11 @@ def Register():
     password2 = request.form.get('password2')
     if request.method == 'POST':
         if not login or not email or not password or not password2:
-            flash('Please, fill all fields!')
+            return jsonify(status=404, message='Missing values!')
         elif ModelUser.read_from_db(user_login=login) or ModelUser.read_from_db(user_email=email):
-            flash('User with such login/email already exist!')
+            return jsonify(status=404, message='User with such login/email already exist!')
         elif password != password2:
-            flash('Passwords are not equal!')
+            return jsonify(status=400, message='Passwords are not equal!')
         else:
             try:
                 UserValidation().load(request.form)
@@ -48,10 +48,12 @@ def Register():
                 new_user.add_users_to_db()
                 """При створенні нового юзера створюємо йому дефолтну папочку"""
                 FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
-                return redirect(url_for('Login'))
+                return jsonify(status=200, message='OK!')
+                #return redirect(url_for('Login'))
             except ValidationError as error:
                 flash(error)
-    return render_template('register.html')
+    return jsonify(status=200, message='OK!')
+    #return render_template('register.html')
 
 
 
