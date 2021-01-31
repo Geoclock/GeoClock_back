@@ -63,27 +63,31 @@ def Register():
 # link to try: http://127.0.0.1:5000/login
 @app.route("/Login", methods=['GET', 'POST'])
 def Login():
-    login = request.form.get('login')
-    password = request.form.get('password')
-    if login and password:
-        # user founded in db by entered login
-        user = ModelUser.read_from_db(user_login=login)
-        # checking existing & entered password
-        if user and check_password_hash(user.user_password, password):
-            login_user(user, remember=True)
-            return redirect(url_for('Hello'))
-            # поки не юзаєм цього
-            # то переадресація не некст сторіночку, куда може попасти залогований юзер
-            """
-            # redirecting user to the next page
-            next_href = request.args.get('next')
-            redirect(next_href)
-            """
+    if request.method == "POST":
+        # login = request.form.get('login')
+        # password = request.form.get('password')
+        login = request.form['login']
+        password = request.form['password']
+        if login and password:
+            # user founded in db by entered login
+            user = ModelUser.read_from_db(user_login=login)
+            # checking existing & entered password
+            if user and check_password_hash(user.user_password, password):
+                login_user(user, remember=True)
+                # return redirect(url_for('Hello'))
+                return jsonify(status=200, message='OK!')
+                # поки не юзаєм цього
+                # то переадресація не некст сторіночку, куда може попасти залогований юзер
+                """
+                # redirecting user to the next page
+                next_href = request.args.get('next')
+                redirect(next_href)
+                """
+            else:
+                return jsonify(status=404, message='Login or password do not match')
         else:
-            flash('Login or password do not match')
-    else:
-        flash('Enter login and password fields')
-    return render_template('login.html')
+            return jsonify(status=400, message='Enter login and password fields')
+        # return render_template('login.html')
 
 
 # Google register
