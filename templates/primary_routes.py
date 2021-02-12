@@ -3,7 +3,7 @@ from app import app,oauth,google
 from Database import db
 from Email import Email
 from flask_mail import Message
-from flask import request, redirect, flash, render_template, url_for
+from flask import request, redirect, flash, render_template, url_for, jsonify
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from Controller.NotificationController import NotificationController
@@ -35,23 +35,26 @@ def Register():
     password2 = request.form.get('password2')
     if request.method == 'POST':
         if not login or not email or not password or not password2:
-            flash('Please, fill all fields!')
+            return jsonify(status=404, message='Missing values!')
         elif ModelUser.read_from_db(user_login=login) or ModelUser.read_from_db(user_email=email):
-            flash('User with such login/email already exist!')
+            return jsonify(status=404, message='User with such login/email already exist!')
         elif password != password2:
-            flash('Passwords are not equal!')
+            return jsonify(status=400, message='Passwords are not equal!')
         else:
             try:
                 UserValidation().load(request.form)
                 hash_pwd = generate_password_hash(password)
                 new_user = ModelUser(user_login=login, user_email=email, user_password=hash_pwd)
                 new_user.add_users_to_db()
+                login_user(new_user, remember=True)
                 """При створенні нового юзера створюємо йому дефолтну папочку"""
                 FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
-                return redirect(url_for('Login'))
+                return jsonify(status=200, message='OK!')
+                #return redirect(url_for('Login'))
             except ValidationError as error:
                 flash(error)
-    return render_template('register.html')
+    return jsonify(status=200, message='OK!')
+    #return render_template('register.html')
 
 
 
@@ -61,27 +64,31 @@ def Register():
 # link to try: http://127.0.0.1:5000/login
 @app.route("/Login", methods=['GET', 'POST'])
 def Login():
-    login = request.form.get('login')
-    password = request.form.get('password')
-    if login and password:
-        # user founded in db by entered login
-        user = ModelUser.read_from_db(user_login=login)
-        # checking existing & entered password
-        if user and check_password_hash(user.user_password, password):
-            login_user(user, remember=True)
-            return redirect(url_for('Hello'))
-            # поки не юзаєм цього
-            # то переадресація не некст сторіночку, куда може попасти залогований юзер
-            """
-            # redirecting user to the next page
-            next_href = request.args.get('next')
-            redirect(next_href)
-            """
+    if request.method == "POST":
+        # login = request.form.get('login')
+        # password = request.form.get('password')
+        login = request.form['login']
+        password = request.form['password']
+        if login and password:
+            # user founded in db by entered login
+            user = ModelUser.read_from_db(user_login=login)
+            # checking existing & entered password
+            if user and check_password_hash(user.user_password, password):
+                login_user(user, remember=True)
+                # return redirect(url_for('Hello'))
+                return jsonify(status=200, message='OK!')
+                # поки не юзаєм цього
+                # то переадресація не некст сторіночку, куда може попасти залогований юзер
+                """
+                # redirecting user to the next page
+                next_href = request.args.get('next')
+                redirect(next_href)
+                """
+            else:
+                return jsonify(status=404, message='Login or password do not match')
         else:
-            flash('Login or password do not match')
-    else:
-        flash('Enter login and password fields')
-    return render_template('login.html')
+            return jsonify(status=400, message='Enter login and password fields')
+        # return render_template('login.html')
 
 
 # Google register
@@ -106,9 +113,7 @@ def authorize():
     resp = google.get('userinfo')  # userinfo contains stuff u specificed in the scrope
     user_info = resp.json()
     user = oauth.google.userinfo()
-    print(user)
-    print(user_info)
-    user_email=user_info['email']
+    user_email = user_info['email']
     user = ModelUser.read_from_db(user_email=user_email)
     # checking existing & entered password
     if user:
@@ -126,7 +131,6 @@ def authorize_new_account():
     user_info = resp.json()
     login = user_info['name']
     email = user_info['email']
-    print(user_info)
     #return GoogleRegister(login=login,email=email)
     return render_template('google_register.html',login=login,email=email)
 
@@ -170,37 +174,49 @@ def Logout():
 def ResetPassword():
     if request.method == "POST":
         mail = request.form['email']
+        if not mail:
+            return jsonify(status=400, message='Please, enter your email!')
         check = ModelUser.read_from_db(user_email=mail)
-
         if check:
             with app.app_context():
-                hashCode = ''.join(random.choices(string.ascii_letters + string.digits, k=24))
+                hashCode = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
                 check.hash_code = hashCode
                 check.commit_changes_to_db()
                 msg = Message('Confirm Password Change', sender=app.config.get('MAIL_USERNAME'), recipients=[mail])
-                msg.body = "Hello,\nWe've received a request to reset your password. If you want to reset your password, click the link below and enter your new password\n http://localhost:5000/" + check.hash_code
+                msg.body = "Hello,\nWe've received a request to reset your password. If you want to reset your password, enter the code in your app and than enter your new password\n\n" + check.hash_code
                 Email.send(msg)
-                flash("The letter was sent. Please, follow the instructions in the letter")
         else:
-            flash("The user with such email was not found!")
-    return render_template('reset_password.html')
+            return jsonify(status=404, message='There is no user with such email!')
+        return jsonify(status=200, message='OK!')
 
 
-@app.route("/<string:hashCode>", methods=["GET", "POST"])
+@app.route("/Code", methods=["GET", "POST"])
+def EnterCode():
+    if request.method == "POST":
+        if not request.form['code']:
+            return jsonify(status=400, message='Please, enter the code!')
+        check = ModelUser.read_from_db(hash_code=request.form['code'])
+        if check:
+            return jsonify(status=200, message='OK!')
+        else:
+            return jsonify(status=404, message='Wrong code!')
+
+
+@app.route("/New_password/<string:hashCode>", methods=["GET", "POST"])
 def hashcode(hashCode):
-    check = ModelUser.read_from_db(hash_code=hashCode)
-    if check:
-        if request.method == 'POST':
-            password = request.form['password']
-            check_password = request.form['check_password']
-            if password == check_password:
-                check.user_password = generate_password_hash(password)
-                check.hash_code = None
-                check.commit_changes_to_db()
-                return redirect(url_for('Hello'))
-            else:
-                flash('Passwords are different!')
-    return render_template("new_password.html")
+    if request.method == 'POST':
+        check = ModelUser.read_from_db(hash_code=hashCode)
+        password = request.form['password']
+        check_password = request.form['check_password']
+        if not password or not check_password:
+            return jsonify(status=400, message="Missing values!")
+        if password == check_password:
+            check.user_password = generate_password_hash(password)
+            check.hash_code = None
+            check.commit_changes_to_db()
+            return jsonify(status=200, message="OK!")
+        else:
+            return jsonify(status=400, message='Passwords are different!')
 
 
 @app.after_request

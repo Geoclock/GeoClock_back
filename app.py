@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_migrate import Migrate
 from authlib.integrations.flask_client import OAuth
+from flask_cors import CORS
 
 from Database import db
 from Manager import manager
@@ -8,6 +9,7 @@ from Email import Email
 import smtplib
 
 app = Flask(__name__)
+CORS(app)
 app.secret_key = 'hehehe'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
