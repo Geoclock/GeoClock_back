@@ -46,6 +46,7 @@ def Register():
                 hash_pwd = generate_password_hash(password)
                 new_user = ModelUser(user_login=login, user_email=email, user_password=hash_pwd)
                 new_user.add_users_to_db()
+                login_user(new_user, remember=True)
                 """При створенні нового юзера створюємо йому дефолтну папочку"""
                 FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
                 return jsonify(status=200, message='OK!')
