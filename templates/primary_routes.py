@@ -1,5 +1,5 @@
 from flask import request
-from app import app,oauth,google
+from app import app
 from Database import db
 from Email import Email
 from flask_mail import Message
@@ -50,11 +50,8 @@ def Register():
                 """При створенні нового юзера створюємо йому дефолтну папочку"""
                 FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
                 return jsonify(status=200, message='OK!')
-                #return redirect(url_for('Login'))
             except ValidationError as error:
-                flash(error)
-    return jsonify(status=200, message='OK!')
-    #return render_template('register.html')
+                return jsonify(status=400, message='Wrong input!')
 
 
 
@@ -88,78 +85,6 @@ def Login():
                 return jsonify(status=404, message='Login or password do not match')
         else:
             return jsonify(status=400, message='Enter login and password fields')
-        # return render_template('login.html')
-
-
-# Google register
-@app.route('/register')
-def google_register():
-    google = oauth.create_client('google')
-    redirect_uri = url_for('authorize_new_account', _external=True)
-    return google.authorize_redirect(redirect_uri)
-
-# Google login
-@app.route('/login')
-def google_login():
-    google = oauth.create_client('google')
-    redirect_uri = url_for('authorize', _external=True)
-    return google.authorize_redirect(redirect_uri)
-
-# google authorize
-@app.route('/authorize')
-def authorize():
-    google = oauth.create_client('google')  # create the google oauth client
-    token = google.authorize_access_token()  # Access token from google (needed to get user info)
-    resp = google.get('userinfo')  # userinfo contains stuff u specificed in the scrope
-    user_info = resp.json()
-    user = oauth.google.userinfo()
-    user_email = user_info['email']
-    user = ModelUser.read_from_db(user_email=user_email)
-    # checking existing & entered password
-    if user:
-        login_user(user, remember=True)
-        return redirect(url_for('Hello'))
-    flash('User isn`t registered. Start with register!')
-    return render_template('login.html')
-
-
-@app.route('/authorize_new_account')
-def authorize_new_account():
-    google = oauth.create_client('google')  # create the google oauth client
-    token = google.authorize_access_token()  # Access token from google (needed to get user info)
-    resp = google.get('userinfo')  # userinfo contains stuff u specificed in the scrope
-    user_info = resp.json()
-    login = user_info['name']
-    email = user_info['email']
-    #return GoogleRegister(login=login,email=email)
-    return render_template('google_register.html',login=login,email=email)
-
-@app.route("/GoogleRegister", methods=['GET', 'POST'])
-def GoogleRegister():
-    login = request.form.get('login')
-    email = request.form.get('email')
-    password = request.form.get('password')
-    password2 = request.form.get('password2')
-    if request.method == 'POST':
-        if not password or not password2:
-            flash('Please, fill all fields!')
-        elif ModelUser.read_from_db(user_login=login) or ModelUser.read_from_db(user_email=email):
-            flash('User with such login/email already exist!')
-        elif password != password2:
-            flash('Passwords are not equal!')
-        else:
-            try:
-                UserValidation().load(request.form)
-                hash_pwd = generate_password_hash(password)
-                new_user = ModelUser(user_login=login, user_email=email, user_password=hash_pwd)
-                new_user.add_users_to_db()
-                """При створенні нового юзера створюємо йому дефолтну папочку"""
-                FolderController.create(user_id=new_user.id, folder_data={'created_by_user': True})
-                return redirect(url_for('Login'))
-            except ValidationError as error:
-                flash(error)
-    return render_template('google_register.html',login=login,email=email)
-
 
 
 # LOGOUT
@@ -167,7 +92,7 @@ def GoogleRegister():
 @login_required
 def Logout():
     logout_user()
-    return redirect(url_for('Hello'))
+    return jsonify(status=200, message='OK!')
 
 
 @app.route('/ResetPassword', methods=["POST", "GET"])
