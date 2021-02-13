@@ -54,35 +54,34 @@ def Register():
                 return jsonify(status=400, message='Wrong input!')
 
 
-
-
-
-# LOGIN
-# link to try: http://127.0.0.1:5000/login
 @app.route("/Login", methods=['GET', 'POST'])
 def Login():
     if request.method == "POST":
-        # login = request.form.get('login')
-        # password = request.form.get('password')
         login = request.form['login']
         password = request.form['password']
         if login and password:
-            # user founded in db by entered login
             user = ModelUser.read_from_db(user_login=login)
-            # checking existing & entered password
             if user and check_password_hash(user.user_password, password):
                 login_user(user, remember=True)
-                # return redirect(url_for('Hello'))
                 return jsonify(status=200, message='OK!')
-                # поки не юзаєм цього
-                # то переадресація не некст сторіночку, куда може попасти залогований юзер
-                """
-                # redirecting user to the next page
-                next_href = request.args.get('next')
-                redirect(next_href)
-                """
             else:
                 return jsonify(status=404, message='Login or password do not match')
+        else:
+            return jsonify(status=400, message='Enter login and password fields')
+
+
+@app.route("/GoogleLogin", methods=['GET', 'POST'])
+def GoogleLogin():
+    if request.method == "POST":
+        login = request.form['login']
+        email = request.form['email']
+        if login and email:
+            user = ModelUser.read_from_db(user_login=login)
+            if user:
+                login_user(user, remember=True)
+                return jsonify(status=200, message='OK!')
+            else:
+                return jsonify(status=404, message='The user was not found!')
         else:
             return jsonify(status=400, message='Enter login and password fields')
 
