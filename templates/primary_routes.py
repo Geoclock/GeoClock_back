@@ -83,7 +83,7 @@ def GoogleLogin():
             else:
                 return jsonify(status=404, message='The user was not found!')
         else:
-            return jsonify(status=400, message='Enter login and password fields')
+            return jsonify(status=400, message='Enter login and email fields')
 
 
 # LOGOUT
