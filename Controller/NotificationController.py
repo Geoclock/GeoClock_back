@@ -24,9 +24,10 @@ class NotificationController(object):
         Notification.add_notification_to_db()
         """Незабуваєм оформти зв'язок геолокація - нотифікація"""
         subjection = NoteSubjection(notification=Notification,
-                                    geolocation=geolocation)
+                                    geolocation=geolocation,
+                                    creator=user)
         subjection.add_to_db()
-        return 1
+        return Notification
 
     @classmethod
     def read(cls, not_id=None,

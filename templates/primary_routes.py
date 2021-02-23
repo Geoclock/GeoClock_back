@@ -14,6 +14,7 @@ from Models.ModelUser import ModelUser, UserValidation
 from marshmallow import ValidationError
 import random
 import string
+import json
 
 
 @app.route("/home")
@@ -63,7 +64,7 @@ def Login():
             user = ModelUser.read_from_db(user_login=login)
             if user and check_password_hash(user.user_password, password):
                 login_user(user, remember=True)
-                return jsonify(status=200, message='OK!')
+                return jsonify(status=200, message='OK!', id=user.id)
             else:
                 return jsonify(status=404, message='Login or password do not match')
         else:
@@ -79,7 +80,7 @@ def GoogleLogin():
             user = ModelUser.read_from_db(user_login=login)
             if user:
                 login_user(user, remember=True)
-                return jsonify(status=200, message='OK!')
+                return jsonify(status=200, message='OK!', id=user.id)
             else:
                 return jsonify(status=404, message='The user was not found!')
         else:
@@ -148,6 +149,45 @@ def redirect_to_signin(response):
     if response.status_code == 401:
         return redirect(url_for('Login'))
     return response
+
+
+@app.route('/UserRead', methods=['GET', 'POST'])
+def read_user():
+    id = request.form['id']
+    data = UserController.read(user_id=id)
+    # return jsonify(status=200, userdata='UserController.read(user_id=id)')
+    return jsonify(status=200, userdata={'id': data.id,
+                                         'user_login': data.user_login,
+                                         'user_email': data.user_email,
+                                         'default_folder_id': data.default_folder_id})
+
+
+@app.route('/AllNotificationRead', methods=['GET', 'POST'])
+def all_notification_read():
+    user_id = request.form['user_id']
+    notifications = NotificationController.read(user_id=user_id)
+    list=[]
+    for notification in notifications:
+        list.append({
+            'id': notification.id,
+            'notification': notification.notification,
+            'radius': notification.radius
+        })
+    #list=json.dumps(list)
+    return jsonify(status=200, notifications=list)
+
+
+@app.route('/NoteCreate', methods=['POST', 'GET', 'PUT'])
+def create_note():
+    note_data = request.form
+    user_id = request.form['user_id']
+    print(note_data)
+    data = NotificationController.create(user_id=user_id,
+                                  not_data=note_data)
+    print(data)
+    return jsonify(status=200, notedata={'id': data.id,
+                                         'notification': data.notification,
+                                         'radius': data.radius})
 
 
 @app.route('/FolderRead', methods=['GET'])
@@ -247,14 +287,6 @@ def render_create_note():
                            geo_list=geo_list)
 
 
-@app.route('/NoteCreate', methods=['POST', 'GET', 'PUT'])
-@login_required
-def create_note():
-    if request.method == "POST":
-        note_data = request.form.to_dict()
-        NotificationController.create(user_id=current_user.id,
-                                      not_data=note_data)
-    return render_create_note()
 
 
 @app.route('/NoteEdit', methods=['POST', 'GET', 'PUT'])
@@ -276,4 +308,3 @@ def delete_note():
         not_id = note_data.get('id')
         NotificationController.delete(not_id=not_id)
     return render_create_note()
-

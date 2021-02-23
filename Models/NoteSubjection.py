@@ -17,10 +17,15 @@ class NoteSubjection(db.Model):
     notification_id = db.Column(db.Integer, db.ForeignKey('notification.id'))
     geolocation = db.relationship('ModelGeolocation', backref='geolocation')
     notification = db.relationship('ModelNotification', backref='notifications')
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    creator = db.relationship('ModelUser', backref='subjectionuser')
 
-    def __init__(self, notification=None, geolocation=None):
+    def __init__(self, notification=None,
+                 geolocation=None,
+                 creator=None):
         self.geolocation = geolocation
         self.notification = notification
+        self.creator=creator
 
     def add_to_db(self):
         db.session.add(self)
