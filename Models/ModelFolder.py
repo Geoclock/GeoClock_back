@@ -40,7 +40,7 @@ class ModelFolder(db.Model):
         if folder_id:
             return ModelFolder.query.filter_by(id=folder_id).first()
         if user_id:
-            return ModelFolder.query.filter_by(creator_id=user_id)
+            return ModelFolder.query.filter_by(creator_id=user_id).all()
         return None
 
     @classmethod

@@ -11,6 +11,7 @@ from Controller.GeolocationController import GeolocationController
 from Controller.UserController import UserController
 from Controller.FolderController import FolderController
 from Models.ModelUser import ModelUser, UserValidation
+from Models.NoteSubjection import NoteSubjection
 from marshmallow import ValidationError
 import random
 import string
@@ -173,8 +174,52 @@ def all_notification_read():
             'notification': notification.notification,
             'radius': notification.radius
         })
-    #list=json.dumps(list)
     return jsonify(status=200, notifications=list)
+
+@app.route('/AllNoteSubjectionsRead', methods=['GET', 'POST'])
+def all_notesubjections_read():
+    user_id = request.form['user_id']
+    notesubjections = NoteSubjection.query.filter_by(creator_id=user_id).all()
+    list=[]
+    for notesubjection in notesubjections:
+        list.append({
+            'id': notesubjection.id,
+            'geo_id': notesubjection.geolocation_id,
+            'note_id': notesubjection.notification_id
+        })
+    return jsonify(status=200, notesubjections=list)
+
+
+@app.route('/AllGeolocationsRead', methods=['GET', 'POST'])
+def all_geolocations_read():
+    user_id = request.form['user_id']
+    geolocations = GeolocationController.read(user_id=user_id)
+    list=[]
+    for geolocation in geolocations:
+        list.append({
+            'id': geolocation.id,
+            'geo_name': geolocation.geo_name,
+            'latitude': geolocation.latitude,
+            'longitude': geolocation.longitude,
+            'address':geolocation.geo_address,
+            'folder_id':geolocation.folder_id
+        })
+    return jsonify(status=200, geolocations=list)
+
+
+
+@app.route('/AllFoldersRead', methods=['GET', 'POST'])
+def all_folders_read():
+    user_id = request.form['user_id']
+    folders = FolderController.read(user_id=user_id)
+    list=[]
+    for folder in folders:
+        list.append({
+            'id': folder.id,
+            'folder_name': folder.folder_name
+        })
+    return jsonify(status=200, folders=list)
+
 
 
 @app.route('/NoteCreate', methods=['POST', 'GET', 'PUT'])
@@ -188,6 +233,11 @@ def create_note():
     return jsonify(status=200, notedata={'id': data.id,
                                          'notification': data.notification,
                                          'radius': data.radius})
+
+
+
+
+
 
 
 @app.route('/FolderRead', methods=['GET'])
